@@ -1,0 +1,9 @@
+run:
+  ip: localhost
+  port: 8082
+storage:
+  videos_data: storage/videos/data
+  videos_cover: storage/videos/cover
+  videos_chunk: storage/videos/tmp
+  images: storage/images
+
