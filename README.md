@@ -10,10 +10,8 @@ videohub
 ├─ go.sum
 ├─ internal
 │  ├─ api
-│  │  ├─ users
-│  │  │  └─ users_controller.go
-│  │  └─ videos
-│  │     └─ videos_controller.go
+│  │  ├─ users_controller.go
+│  │  └─ videos_controller.go
 │  ├─ model
 │  │  ├─ collection_model.go
 │  │  ├─ comment_model.go
@@ -32,6 +30,8 @@ videohub
 │  │  ├─ video_service.go
 │  │  └─ video_upload_service.go
 │  └─ utils
+│     └─ configTool.go
+├─ README.md
 └─ storage
    ├─ images
    └─ videos

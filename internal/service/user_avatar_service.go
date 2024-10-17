@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"videohub/internal/repository"
 )
 
@@ -13,3 +14,16 @@ type User_avatar_service struct {
 func NewUser_avatar_service(ur *repository.User_repository) *User_avatar_service {
 	return &(User_avatar_service{user_repository: ur})
 }
+
+/*
+*@author:廖嘉鹏
+*@create_at:2024/10/17
+ */
+// 测试，这是一个样板
+func (uas *User_avatar_service) Test() error {
+	fmt.Println("User_avatar_service.Test()调用正常")
+	uas.user_repository.Test()
+	return nil
+}
+
+//服务函数追加在下面

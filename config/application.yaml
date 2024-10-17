@@ -6,4 +6,6 @@ storage:
   videos_cover: storage/videos/cover
   videos_chunk: storage/videos/tmp
   images: storage/images
-
+mysql:
+  username: joey
+  password: 123456
