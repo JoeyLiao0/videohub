@@ -46,18 +46,18 @@ func routerInit(r *gin.Engine, config *utils.Config) {
 	//依赖注入
 
 	//1、db 到 repository
-	collection_repository := repository.NewCollection_respository(db)
-	comment_repository := repository.NewComment_respository(db)
-	user_respository := repository.NewUser_respository(db)
-	video_repository := repository.NewVideo_respository(db)
+	collection_repository := repository.NewCollection_repository(db)
+	comment_repository := repository.NewComment_repository(db)
+	user_repository := repository.NewUser_repository(db)
+	video_repository := repository.NewVideo_repository(db)
 
 	//2、repository 到 service
-	user_avatar_service := service.NewUser_avatar_service(user_respository)
-	user_list_service := service.NewUser_list_service(user_respository)
-	user_service := service.NewUser_service(user_respository, collection_repository, video_repository)
-	video_list_service := service.NewVideo_list_service(user_respository, video_repository)
-	video_upload_service := service.NewVideo_upload_service(user_respository, video_repository)
-	video_service := service.NewVideo_service(user_respository, video_repository, comment_repository)
+	user_avatar_service := service.NewUser_avatar_service(user_repository)
+	user_list_service := service.NewUser_list_service(user_repository)
+	user_service := service.NewUser_service(user_repository, collection_repository, video_repository)
+	video_list_service := service.NewVideo_list_service(user_repository, video_repository)
+	video_upload_service := service.NewVideo_upload_service(user_repository, video_repository)
+	video_service := service.NewVideo_service(user_repository, video_repository, comment_repository)
 
 	//3、service 到 controller
 	users_controller := api.NewUsers_controller(user_avatar_service, user_list_service, user_service)

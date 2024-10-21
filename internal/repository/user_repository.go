@@ -11,7 +11,7 @@ type User_repository struct {
 }
 
 // 工厂函数，存储单例的数据库操作对象
-func NewUser_respository(db *gorm.DB) *User_repository {
+func NewUser_repository(db *gorm.DB) *User_repository {
 	return &User_repository{dB: db}
 }
 

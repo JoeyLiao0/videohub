@@ -11,7 +11,7 @@ type Collection_repository struct {
 }
 
 // 工厂函数，存储单例的数据库操作对象
-func NewCollection_respository(db *gorm.DB) *Collection_repository {
+func NewCollection_repository(db *gorm.DB) *Collection_repository {
 	return &Collection_repository{dB: db}
 }
 
