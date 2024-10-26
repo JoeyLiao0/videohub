@@ -9,29 +9,31 @@ videohub
 ├─ go.mod
 ├─ go.sum
 ├─ internal
-│  ├─ api
-│  │  ├─ users_controller.go
-│  │  └─ videos_controller.go
+│  ├─ config
+│  │  └─ config.go
+│  ├─ controller
+│  │  ├─ users.go
+│  │  └─ videos.go
 │  ├─ model
-│  │  ├─ collection_model.go
-│  │  ├─ comment_model.go
-│  │  ├─ user_model.go
-│  │  └─ video_model.go
+│  │  ├─ collection.go
+│  │  ├─ comment.go
+│  │  ├─ user.go
+│  │  └─ video.go
 │  ├─ repository
-│  │  ├─ collection_repository.go
-│  │  ├─ comment_repository.go
-│  │  ├─ user_repository.go
-│  │  └─ video_repository.go
+│  │  ├─ collection.go
+│  │  ├─ comment.go
+│  │  ├─ user.go
+│  │  └─ video.go
+│  ├─ router
+│  │  └─ router.go
 │  ├─ service
-│  │  ├─ user_avatar_service.go
-│  │  ├─ user_list_service.go
-│  │  ├─ user_service.go
-│  │  ├─ video_list_service.go
-│  │  ├─ video_service.go
-│  │  └─ video_upload_service.go
+│  │  ├─ user.go
+│  │  ├─ user_avatar.go
+│  │  ├─ user_list.go
+│  │  ├─ video.go
+│  │  ├─ video_list.go
+│  │  └─ video_upload.go
 │  └─ utils
-│     └─ configTool.go
-├─ README.md
 └─ storage
    ├─ images
    └─ videos
