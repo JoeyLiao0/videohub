@@ -1,11 +1,14 @@
-package utils
+package config
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
 	"gopkg.in/yaml.v3"
 )
+
+var GlobalConfig *Config
 
 type Config struct {
 	Run     runConfig     `yaml:"run"`
@@ -28,22 +31,25 @@ type mysqlConfig struct {
 	Password string `yaml:"password"`
 }
 
-func GetConfig() (*Config, error) {
-
+func Init() {
 	s, _ := os.Getwd()
-
 	configPath := filepath.Join(s, "config/application.yaml")
 
 	dataBytes, err := os.ReadFile(configPath)
 	if err != nil {
-		return nil, err
+		panic(err) // 使用panic来处理初始化失败的情况
 	}
 	config := Config{}
 	err = yaml.Unmarshal(dataBytes, &config)
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 
-	return &config, nil
+	GlobalConfig = &config
+	fmt.Println("已加载配置")
+}
 
+// GetConfig 返回全局配置的引用
+func GetConfig() *Config {
+	return GlobalConfig
 }

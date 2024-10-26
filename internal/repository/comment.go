@@ -6,13 +6,13 @@ import (
 	"gorm.io/gorm"
 )
 
-type Video_repository struct {
+type Comment struct {
 	dB *gorm.DB
 }
 
 // 工厂函数，存储单例的数据库操作对象
-func NewVideo_repository(db *gorm.DB) *Video_repository {
-	return &Video_repository{dB: db}
+func NewComment(db *gorm.DB) *Comment {
+	return &Comment{dB: db}
 }
 
 /*
@@ -20,7 +20,7 @@ func NewVideo_repository(db *gorm.DB) *Video_repository {
 *@create_at:2024/10/17
  */
 // 测试，这是一个样板
-func (vr *Video_repository) Test() error {
-	fmt.Println("Video_repository.Test()调用正常")
+func (cr *Comment) Test() error {
+	fmt.Println("Comment_repository.Test()调用正常")
 	return nil
 }
