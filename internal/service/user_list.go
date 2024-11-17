@@ -1,7 +1,7 @@
 package service
 
 import (
-	"fmt"
+	"videohub/internal/model"
 	"videohub/internal/repository"
 )
 
@@ -15,15 +15,12 @@ func NewUser_list(ur *repository.User) *User_list {
 	return &(User_list{userRepo: ur})
 }
 
-/*
-*@author:廖嘉鹏
-*@create_at:2024/10/17
- */
-// 测试，这是一个样板
-func (uls *User_list) Test() error {
-	fmt.Println("User_list_service.Test()调用正常")
-	uls.userRepo.Test()
-	return nil
+// GetAllUsers 获取所有用户信息
+func (uls *User_list) GetAllUsers() ([]model.User, error) {
+	// 调用 user_repository 获取所有用户的信息
+	users, err := uls.userRepo.GetAllUsers()
+	if err != nil {
+		return nil, err
+	}
+	return users, nil
 }
-
-//服务函数追加在下面

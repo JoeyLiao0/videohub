@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"mime/multipart"
 	"videohub/internal/repository"
 )
 
@@ -15,15 +16,11 @@ func NewUser_avatar(ur *repository.User) *User_avatar {
 	return &(User_avatar{userRepo: ur})
 }
 
-/*
-*@author:廖嘉鹏
-*@create_at:2024/10/17
- */
-// 测试，这是一个样板
-func (uas *User_avatar) Test() error {
-	fmt.Println("User_avatar_service.Test()调用正常")
-	uas.userRepo.Test()
+// UploadUserAvatar 上传用户头像
+func (uas *User_avatar) UploadUserAvatar(userID uint, file multipart.File) error {
+	// 调用 user_repository 进行头像上传相关操作
+	// 这里可以是头像文件的存储操作等
+	fmt.Printf("Uploading avatar for user ID: %d\n", userID)
+	// 实现具体的头像上传逻辑，例如保存文件到本地或云存储
 	return nil
 }
-
-//服务函数追加在下面
