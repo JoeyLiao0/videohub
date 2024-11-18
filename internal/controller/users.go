@@ -85,7 +85,7 @@ func (uc *Users) UpdateUser(c *gin.Context) {
 		return
 	}
 
-	var inputs service.UpdateUserInput
+	var inputs service.UpdateUserRequest
 	if err := c.ShouldBindJSON(&inputs); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"}) // 如果解析 JSON 失败，返回 HTTP 400
 		return

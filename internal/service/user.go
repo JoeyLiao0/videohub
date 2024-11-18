@@ -29,13 +29,17 @@ type CreateUserInput struct {
 	Avatar   string `json:"avatar"`
 }
 
-type UpdateUserInput struct {
+type UpdateUserRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
 	Email    string `json:"email"`
 	Avatar   string `json:"avatar"`
 	Status   uint8  `json:"status"`
 	Role     uint8  `json:"role"`
+}
+
+type UpdateUserResponse struct {
+	
 }
 
 // 工厂函数，返回单例的服务层操作对象

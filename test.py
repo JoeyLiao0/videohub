@@ -93,7 +93,7 @@
 
 import hashlib
 
-pwd = '1234'
-salt = '32f2627f68b91c460f6dbc0151987cc5'
+pwd = '123'
+salt = 'e97e4454e5f3df8b4c571eb0fd420b0d'
 hash = hashlib.sha256((pwd + salt).encode()).hexdigest()
 print(hash)
