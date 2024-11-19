@@ -19,14 +19,15 @@ func InitRouter() *gin.Engine {
 	videoRepo := repository.NewVideo(db)
 
 	//2、repository 到 service
-	userAvatarService := service.NewUser_avatar(userRepo)
-	userListService := service.NewUser_list(userRepo)
+	userAvatarService := service.NewUserAvatar(userRepo)
+	userListService := service.NewUserList(userRepo)
 	userService := service.NewUser(userRepo, collectionRepo, videoRepo)
 	videoUploadService := service.NewVideoUploadService(videoRepo)
 
 	//3、service 到 controller
-	users_controller := controller.NewUsers(userAvatarService, userListService, userService)
-	videos_controller := controller.NewVideos(videoUploadService)
+	userController := controller.NewUserController(userAvatarService, userListService, userService)
+	videoController := controller.NewVideoController(videoUploadService)
+	adminController := controller.NewAdminController(userAvatarService, userListService, userService)
 
 	r := gin.Default()
 	// 为 multipart forms 设置较低的内存限制 (默认是 32 MiB)
@@ -40,37 +41,91 @@ func InitRouter() *gin.Engine {
 	r.Static("/storage/videos", config.AppConfig.Storage.VideosData)        // 视频存储
 	r.Static("/storage/videos_cover", config.AppConfig.Storage.VideosCover) // 视频封面存储
 
+	adminRouter := r.Group("/admin")
+	{
+		adminRouter.POST("/token", userController.Login)
+		adminRouter.POST("/access_token", userController.AccessToken)
+		adminRouter.Use(middleware.AuthMiddleware(1))
+		{
+			// 获取管理员个人信息
+			adminRouter.GET("", adminController.GetUser)
+			// 获取用户信息
+			adminRouter.GET("/users", adminController.GetUsers)
+			// 创建用户
+			adminRouter.POST("/users", adminController.CreateUsers)
+			// 更新用户信息 (id 不需要放在路由吧, 放 body 里面, 可以同时修改多个用户)
+			adminRouter.PUT("/users/:id", adminController.UpdateUsers)
+			// (有无删除用户的需求, 还是只修改 status)
+
+			// 视频列表获取
+			adminRouter.GET("/videos", adminController.GetVideos)
+			// 视频状态修改 (单个修改 ?)
+			adminRouter.PUT("/videos/:vid", adminController.UpdateVideos)
+			// 视频删除 (单个删除 ?)
+			adminRouter.DELETE("/videos/:vid", adminController.DeleteVideos)
+		}
+	}
+
 	// 用户路由组
 	userRouter := r.Group("/users")
 	{
-		userRouter.POST("", users_controller.CreateUser)
+		// 用户注册
+		userRouter.POST("", userController.CreateUser)
+		// 用户登录
+		userRouter.POST("/token", userController.Login)
+		// 利用刷新令牌获取访问令牌
+		userRouter.POST("/access_token", userController.AccessToken)
 
-		userRouter.POST("/token", users_controller.Login)
-		userRouter.POST("/access_token", users_controller.AccessToken)
-
-		userRouter.Use(middleware.AuthMiddleware())
+		userRouter.Use(middleware.AuthMiddleware(0))
 		{
-			userRouter.GET("", users_controller.GetAllUsers)
-
-			userRouter.GET("/:id", users_controller.GetUserByID)
-			userRouter.PUT("/:id", users_controller.UpdateUser)
-			userRouter.DELETE("/:id", users_controller.DeleteUser)
-
-			userRouter.POST("/:id/avatar", users_controller.UploadAvatar)
-
-			userRouter.PUT("/:id/password", users_controller.UpdatePassword)
-
-			userRouter.POST("/:id/email", users_controller.SendEmailVerification)
-
+			// 获取用户信息
+			userRouter.GET("", userController.GetUser)
+			// 修改用户信息
+			userRouter.PUT("", userController.UpdateUser)
+			// 删除用户 (注销, 是否从数据库删除, 还是只修改 status)
+			userRouter.DELETE("", userController.DeleteUser)
+			// 用户上传头像
+			userRouter.POST("/avatar", userController.UploadAvatar)
+			// 用户修改密码
+			userRouter.PUT("/password", userController.UpdatePassword)
+			// 发送验证码 (是否修改路由为 /api/email, Email 部分和 user 无关)
+			userRouter.POST("/email", userController.SendEmailVerification)
+			// 用户发布视频列表获取
+			userRouter.GET("/videos", userController.GetVideos)
+			// 删除用户发布的视频 (单个删除 ?)
+			userRouter.DELETE("/videos/:vid", userController.DeleteVideos)
+			// 获取用户视频收藏列表 (将 favorites 改为 collections)
+			userRouter.GET("/collections", userController.GetCollections)
+			// 用户收藏视频
+			userRouter.POST("/collections", userController.UpdateCollections)
+			// 用户删除收藏视频
+			userRouter.DELETE("/collections", userController.DeleteCollections)
 		}
 	}
 	// 视频路由组
 	videoRouter := r.Group("/videos")
 	{
-		// videoRouter.GET("", videos_controller.GetVideos)
-		videoRouter.POST("/chunk", videos_controller.UploadChunk)
-		videoRouter.POST("/complete", videos_controller.CompleteUpload)
-	}
+		// 获取视频列表 (要加 jwt 吗? 未登录不能获取吗)
+		videoRouter.GET("", videoController.GetVideos)
+		// 获取视频评论
+		videoRouter.GET("/:vid/comments", videoController.GetComments)
 
+		videoRouter.Use(middleware.AuthMiddleware(0))
+		{
+			// 视频点赞 (这里应该还有取消点赞吧, 以后可以追加 视频收藏、转发等)
+			videoRouter.POST("/:vid", videoController.LikeVideo)
+			// 新增视频评论
+			videoRouter.POST("/:vid/comments", videoController.AddComment)
+			// 评论点赞
+			videoRouter.POST("/:vid/comments/:cid", videoController.LikeComment)
+			// 删除评论
+			videoRouter.DELETE("/:vid/comments/:cid", videoController.DeleteComment)
+			// 视频分片上传
+			videoRouter.POST("/chunk", videoController.UploadChunk)
+			// 合并视频分片
+			videoRouter.POST("/complete", videoController.CompleteUpload)
+		}
+
+	}
 	return r
 }

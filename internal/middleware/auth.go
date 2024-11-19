@@ -11,12 +11,11 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-func AuthMiddleware() gin.HandlerFunc {
+func AuthMiddleware(role uint8) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token := c.GetHeader("Authorization")
-		log.Println("token:", token)
 		if token == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization token is required"})  // 401
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization token is required"}) // 401
 			c.Abort()
 			return
 		}
@@ -30,8 +29,14 @@ func AuthMiddleware() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		c.Set("id", payload.ID)
-		c.Set("role", payload.Role)
-		c.Next()
+		log.Printf("role: %v %T", payload.Role, payload.Role)
+		if payload.Role == role {
+			c.Set("id", payload.ID)
+			c.Set("role", payload.Role)
+			c.Next()
+			return
+		}
+		c.JSON(http.StatusForbidden, gin.H{"error": "forbidden"}) // 403
+		c.Abort()
 	}
 }

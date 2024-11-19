@@ -9,16 +9,47 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type Videos struct {
+type VideosController struct {
 	videoUpload *service.VideoUpload
 }
 
-func NewVideos(vus *service.VideoUpload) *Videos {
-	return &Videos{videoUpload: vus}
+// NewVideoController creates a new instance of VideosController with the provided service.
+func NewVideoController(vus *service.VideoUpload) *VideosController {
+	return &VideosController{videoUpload: vus}
+}
+
+// GetVideos 获取视频列表
+func (vc *VideosController) GetVideos(c *gin.Context) {
+	// TODO
+}
+
+// LikeVideo 点赞视频
+func (vc *VideosController) LikeVideo(c *gin.Context) {
+	// TODO
+}
+
+// GetComments 获取视频评论
+func (vc *VideosController) GetComments(c *gin.Context) {
+	// TODO
+}
+
+// AddComment 添加视频评论
+func (vc *VideosController) AddComment(c *gin.Context) {
+	// TODO
+}
+
+// LikeComment 点赞评论
+func (vc *VideosController) LikeComment(c *gin.Context) {
+	// TODO
+}
+
+// DeleteComment 删除评论
+func (vc *VideosController) DeleteComment(c *gin.Context) {
+	// TODO
 }
 
 // UploadChunk 处理切片上传请求
-func (controller *Videos) UploadChunk(c *gin.Context) {
+func (vc *VideosController) UploadChunk(c *gin.Context) {
 	var videoChunk model.VideoChunk
 
 	if err := c.ShouldBindJSON(&videoChunk); err != nil {
@@ -33,7 +64,7 @@ func (controller *Videos) UploadChunk(c *gin.Context) {
 		return
 	}
 
-	if err := controller.videoUpload.HandleVideoChunk(videoChunk, fileHeader); err != nil {
+	if err := vc.videoUpload.HandleVideoChunk(videoChunk, fileHeader); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "chunk processing error"})
 		return
 	}
@@ -42,7 +73,7 @@ func (controller *Videos) UploadChunk(c *gin.Context) {
 }
 
 // CompleteUpload 处理完整视频合并请求
-func (controller *Videos) CompleteUpload(c *gin.Context) {
+func (vc *VideosController) CompleteUpload(c *gin.Context) {
 	// 从表单数据获取参数
 	uploadID, _ := strconv.ParseInt(c.PostForm("upload_id"), 10, 64)
 	title := c.PostForm("title")
@@ -75,7 +106,7 @@ func (controller *Videos) CompleteUpload(c *gin.Context) {
 
 	chunkEndID, _ := strconv.Atoi(c.PostForm("chunk_end_id"))
 
-	if err := controller.videoUpload.HandleVideoComplete(video, chunkEndID, coverFile, videoHash); err != nil {
+	if err := vc.videoUpload.HandleVideoComplete(video, chunkEndID, coverFile, videoHash); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "video merge error"})
 		return
 	}
