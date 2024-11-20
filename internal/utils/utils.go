@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -50,7 +51,7 @@ func ParseJWT(tokenString string, key string) (Payload, error) {
 		}
 		return claims.Payload, nil
 	} else {
-		return Payload{}, errors.New("convert token to claims error")
+		return Payload{}, jwt.ErrTokenInvalidClaims
 	}
 }
 
@@ -75,4 +76,16 @@ func HashPassword(password string, salt string) string {
 	saltedPassword := password + salt
 	hash := sha256.Sum256([]byte(saltedPassword))
 	return hex.EncodeToString(hash[:])
+}
+
+func GetUserID(c *gin.Context) (uint64, error) {
+	idValue, exists := c.Get("id")
+	if !exists {
+		return 0, errors.New("上下文中不存在用户 ID")
+	}
+	id, ok := idValue.(uint64)
+	if !ok {
+		return 0, errors.New("用户 ID 类型错误")
+	}
+	return id, nil
 }

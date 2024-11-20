@@ -52,17 +52,16 @@ func InitRouter() *gin.Engine {
 			// 获取用户信息
 			adminRouter.GET("/users", adminController.GetUsers)
 			// 创建用户
-			adminRouter.POST("/users", adminController.CreateUsers)
-			// 更新用户信息 (id 不需要放在路由吧, 放 body 里面, 可以同时修改多个用户)
-			adminRouter.PUT("/users/:id", adminController.UpdateUsers)
-			// (有无删除用户的需求, 还是只修改 status)
+			adminRouter.POST("/users", adminController.CreateUser)
+			// 更新用户信息
+			adminRouter.PUT("/users/:id", adminController.UpdateUser)
 
 			// 视频列表获取
 			adminRouter.GET("/videos", adminController.GetVideos)
-			// 视频状态修改 (单个修改 ?)
-			adminRouter.PUT("/videos/:vid", adminController.UpdateVideos)
-			// 视频删除 (单个删除 ?)
-			adminRouter.DELETE("/videos/:vid", adminController.DeleteVideos)
+			// 视频状态修改
+			adminRouter.PUT("/videos/:vid", adminController.UpdateVideo)
+			// 视频删除
+			adminRouter.DELETE("/videos/:vid", adminController.DeleteVideo)
 		}
 	}
 
@@ -88,13 +87,11 @@ func InitRouter() *gin.Engine {
 			userRouter.POST("/avatar", userController.UploadAvatar)
 			// 用户修改密码
 			userRouter.PUT("/password", userController.UpdatePassword)
-			// 发送验证码 (是否修改路由为 /api/email, Email 部分和 user 无关)
-			userRouter.POST("/email", userController.SendEmailVerification)
 			// 用户发布视频列表获取
 			userRouter.GET("/videos", userController.GetVideos)
-			// 删除用户发布的视频 (单个删除 ?)
-			userRouter.DELETE("/videos/:vid", userController.DeleteVideos)
-			// 获取用户视频收藏列表 (将 favorites 改为 collections)
+			// 删除用户发布的视频
+			userRouter.DELETE("/videos/:vid", userController.DeleteVideo)
+			// 获取用户视频收藏列表
 			userRouter.GET("/collections", userController.GetCollections)
 			// 用户收藏视频
 			userRouter.POST("/collections", userController.UpdateCollections)
@@ -105,14 +102,14 @@ func InitRouter() *gin.Engine {
 	// 视频路由组
 	videoRouter := r.Group("/videos")
 	{
-		// 获取视频列表 (要加 jwt 吗? 未登录不能获取吗)
+		// 获取视频列表
 		videoRouter.GET("", videoController.GetVideos)
 		// 获取视频评论
 		videoRouter.GET("/:vid/comments", videoController.GetComments)
 
 		videoRouter.Use(middleware.AuthMiddleware(0))
 		{
-			// 视频点赞 (这里应该还有取消点赞吧, 以后可以追加 视频收藏、转发等)
+			// 视频点赞
 			videoRouter.POST("/:vid", videoController.LikeVideo)
 			// 新增视频评论
 			videoRouter.POST("/:vid/comments", videoController.AddComment)
@@ -125,7 +122,12 @@ func InitRouter() *gin.Engine {
 			// 合并视频分片
 			videoRouter.POST("/complete", videoController.CompleteUpload)
 		}
+	}
 
+	apiRouter := r.Group("/api")
+	{
+		// 发送邮箱验证码
+		apiRouter.POST("/email", userController.SendEmailVerification)
 	}
 	return r
 }

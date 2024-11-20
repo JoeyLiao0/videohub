@@ -2,7 +2,6 @@ package service
 
 import (
 	"errors"
-	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -11,7 +10,6 @@ import (
 	"videohub/internal/repository"
 	"videohub/internal/utils"
 
-	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -22,159 +20,107 @@ type User struct {
 	videoRepo      *repository.Video
 }
 
-type CreateUserInput struct {
-	Username string `json:"username" binding:"required"`
-	Password string `json:"password" binding:"required"`
-	Email    string `json:"email" binding:"required"`
-	Avatar   string `json:"avatar"`
-}
-
-type UpdateUserRequest struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-	Email    string `json:"email"`
-	Avatar   string `json:"avatar"`
-	Status   uint8  `json:"status"`
-	Role     uint8  `json:"role"`
-}
-
-type UpdateUserResponse struct {
-	
-}
-
 // 工厂函数，返回单例的服务层操作对象
 func NewUser(ur *repository.User, cr *repository.Collection, vr *repository.Video) *User {
 	return &(User{userRepo: ur, collectionRepo: cr, videoRepo: vr})
 }
 
-// 服务函数追加在下面
-func (us *User) Login(c *gin.Context) {
-	// 或者使用 map[string]interface{}
-	var inputs struct {
-		Username string `json:"username" binding:"required"`
-		Password string `json:"password" binding:"required"`
-	}
-
-	if err := c.ShouldBindJSON(&inputs); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()}) // 400
-		return
-	}
-
+func (us *User) Login(request utils.LoginRequest) *utils.Response {
 	var user model.User
-	if err := us.userRepo.SearchByUsername(inputs.Username, &user); err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "wrong credentials"}) // 401
-		return
+	if err := us.userRepo.SearchByEmail(request.Email, &user); err != nil {
+		return utils.Error(http.StatusUnauthorized, "邮箱未注册")
 	}
-	log.Println(user.Password, inputs.Password)
-	if user.Password != utils.HashPassword(inputs.Password, user.Salt) {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "wrong credentials"}) // 401
-		return
+	log.Println(user.Password, request.Password)
+	if user.Password != utils.HashPassword(request.Password, user.Salt) {
+		return utils.Error(http.StatusUnauthorized, "邮箱或密码错误")
 	}
 
 	accessToken, err := utils.GenerateJWT(utils.Payload{ID: user.ID, Role: user.Role}, config.AppConfig.JWT.AccessTokenSecret, config.AppConfig.JWT.AccessTokenExpire)
-
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"}) // 500
-		return
+		return utils.Error(http.StatusInternalServerError, "生成访问令牌失败")
 	}
 
 	refreshToken, err := utils.GenerateJWT(utils.Payload{ID: user.ID, Role: user.Role}, config.AppConfig.JWT.RefreshTokenSecret, config.AppConfig.JWT.RefreshTokenExpire)
-
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"}) // 500
-		return
+		return utils.Error(http.StatusInternalServerError, "生成刷新令牌失败")
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"access_token":  accessToken,
-		"refresh_token": refreshToken,
+	return utils.Ok(http.StatusOK, utils.LoginResponse{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
 	})
 }
 
-func (us *User) AccessToken(c *gin.Context) {
-	var inputs struct {
-		RefreshToken string `json:"refresh_token" binding:"required"`
-	}
-	if err := c.ShouldBindJSON(&inputs); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()}) // 400
-		return
-	}
-
-	payload, err := utils.ParseJWT(inputs.RefreshToken, config.AppConfig.JWT.RefreshTokenSecret)
+func (us *User) AccessToken(request utils.AccessTokenRequest) *utils.Response {
+	payload, err := utils.ParseJWT(request.RefreshToken, config.AppConfig.JWT.RefreshTokenSecret)
 	if err != nil {
 		if errors.Is(err, jwt.ErrTokenExpired) {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()}) // 401
+			return utils.Error(http.StatusUnauthorized, "刷新令牌已过期")
 		} else {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"}) // 500
+			return utils.Error(http.StatusInternalServerError, "解析刷新令牌失败")
 		}
-		return
 	}
 
 	var user model.User
 	if err := us.userRepo.SearchById(payload.ID, &user); err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()}) // 401
-		return
+		return utils.Error(http.StatusUnauthorized, "用户不存在")
 	}
 
 	accessToken, err := utils.GenerateJWT(payload, config.AppConfig.JWT.AccessTokenSecret, config.AppConfig.JWT.AccessTokenExpire)
-
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"}) // 500
-		return
+		return utils.Error(http.StatusInternalServerError, "生成访问令牌失败")
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"access_token": accessToken,
-	})
+	return utils.Ok(http.StatusOK, utils.AccessTokenResponse{AccessToken: accessToken})
 }
 
 // GetUserByID 根据用户 ID 获取单个用户信息
-func (us *User) GetUserByID(userID uint64) (*model.User, error) {
+func (us *User) GetUserByID(userID uint64) *utils.Response {
 	// 调用 repository 查询用户
 	user, err := us.userRepo.GetUserByID(userID)
 	if err != nil {
-		return nil, err
+		return utils.Error(http.StatusNotFound, err.Error())
 	}
-	return user, nil
+	return utils.Ok(http.StatusOK, user)
 }
 
 // CreateUser 创建新用户
 // TODO: 是否创建钩子函数
-func (us *User) CreateUser(inputs CreateUserInput, newUser *model.User) error {
+func (us *User) CreateUser(request utils.CreateUserRequest, newUser *model.User) *utils.Response {
 	// 1. 检查用户名是否唯一
-	existingUser, err := us.userRepo.FindUserByUsername(inputs.Username)
+	existingUser, err := us.userRepo.FindUserByUsername(request.Username)
 	if err != nil {
-		return fmt.Errorf("查询用户名时发生错误: %v", err)
+		return utils.Error(http.StatusInternalServerError, "查询用户名时发生错误")
 	}
 	if existingUser != nil {
-		return fmt.Errorf("用户名已存在")
+		return utils.Error(http.StatusBadRequest, "用户名已被注册")
 	}
 
 	// 2. 检查邮箱是否唯一
-	existingEmailUser, err := us.userRepo.FindUserByEmail(inputs.Email)
+	existingEmailUser, err := us.userRepo.FindUserByEmail(request.Email)
 	if err != nil {
-		return fmt.Errorf("查询邮箱时发生错误: %v", err)
+		return utils.Error(http.StatusInternalServerError, "查询邮箱时发生错误")
 	}
 	if existingEmailUser != nil {
-		return fmt.Errorf("邮箱已被注册")
+		return utils.Error(http.StatusBadRequest, "邮箱已被注册")
 	}
 
 	// 3. 创建新用户
-	newUser.Username = inputs.Username
+	newUser.Username = request.Username
 	newUser.Salt = utils.GenerateSalt(16)
-	newUser.Password = utils.HashPassword(inputs.Password, newUser.Salt)
+	newUser.Password = utils.HashPassword(request.Password, newUser.Salt)
 	newUser.CreatedAt = time.Now().UnixMilli()
-	newUser.Avatar = inputs.Avatar
-	newUser.Email = inputs.Email
+	newUser.Avatar = request.Avatar
+	newUser.Email = request.Email
 	newUser.Status = 1
 	newUser.Role = 0
 
 	// 4. 存储用户信息
 	if err := us.userRepo.CreateUser(newUser); err != nil {
-		return err
+		return utils.Error(http.StatusInternalServerError, "创建用户时发生错误")
 	}
 
-	return nil
+	return utils.Ok(http.StatusCreated, "用户创建成功")
 }
 
 // UpdateUser 更新用户信息

@@ -16,7 +16,7 @@ func NewUser(db *gorm.DB) *User {
 	return &User{dB: db}
 }
 
-func (ur *User) SearchByUsername(username string, user *model.User) error {
+func (ur *User) SearchByEmail(username string, user *model.User) error {
 	return ur.dB.Where("username = ?", username).First(user).Error
 }
 
