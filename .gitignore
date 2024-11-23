@@ -27,3 +27,5 @@ go.work.sum
 test.py
 test.go
 .air.toml
+
+storage/
