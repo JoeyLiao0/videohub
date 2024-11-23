@@ -13,12 +13,13 @@ type Config struct {
 	Run     runConfig     `yaml:"run"`
 	Storage storageConfig `yaml:"storage"`
 	Mysql   mysqlConfig   `yaml:"mysql"`
+	Redis   redisConfig   `yaml:"redis"`
 	JWT     jwtConfig     `yaml:"jwt"`
 	CORS    corsConfig    `yaml:"cors"`
 }
 type runConfig struct {
 	Name string `yaml:"name"`
-	IP   string `yaml:"ip"`
+	Host string `yaml:"host"`
 	Port string `yaml:"port"`
 }
 
@@ -35,6 +36,13 @@ type mysqlConfig struct {
 	Username string `yaml:"username"`
 	Password string `yaml:"password"`
 	Name     string `yaml:"name"`
+}
+
+type redisConfig struct {
+	Host     string `yaml:"host"`
+	Port     string `yaml:"port"`
+	Password string `yaml:"password"`
+	DB       int    `yaml:"db"`
 }
 
 type jwtConfig struct {
@@ -65,5 +73,6 @@ func InitConfig() {
 	}
 
 	AppConfig = &config
-	log.Printf("%v %T", AppConfig.CORS.AllowOrigins, AppConfig.CORS.AllowOrigins)
+
+	initRedis()
 }

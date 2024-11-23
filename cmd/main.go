@@ -21,7 +21,7 @@ func main() {
 	r := router.InitRouter()
 	// r.Run(config.AppConfig.Run.IP + ":" + config.AppConfig.Run.Port)
 	srv := &http.Server{
-		Addr:    config.AppConfig.Run.IP + ":" + config.AppConfig.Run.Port,
+		Addr:    config.AppConfig.Run.Host + ":" + config.AppConfig.Run.Port,
 		Handler: r,
 	}
 

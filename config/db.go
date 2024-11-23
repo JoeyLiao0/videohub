@@ -18,8 +18,10 @@ func InitDB() *gorm.DB {
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 
 	if err != nil {
-		log.Fatalf("Error connecting to database: %v", err)
+		log.Fatalf("Error connecting to mysql: %v", err)
 	}
+
+	log.Println("Connected to mysql")
 
 	db.AutoMigrate(&model.User{}, &model.Video{}, &model.VideoChunk{})
 
