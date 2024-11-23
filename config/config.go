@@ -5,7 +5,6 @@ import (
 	"os"
 
 	"gopkg.in/yaml.v3"
-	// "github.com/spf13/viper"
 )
 
 var AppConfig *Config
@@ -15,6 +14,7 @@ type Config struct {
 	Storage storageConfig `yaml:"storage"`
 	Mysql   mysqlConfig   `yaml:"mysql"`
 	JWT     jwtConfig     `yaml:"jwt"`
+	CORS    corsConfig    `yaml:"cors"`
 }
 type runConfig struct {
 	Name string `yaml:"name"`
@@ -44,24 +44,17 @@ type jwtConfig struct {
 	RefreshTokenExpire uint   `yaml:"refresh_token_expire"`
 }
 
+type corsConfig struct {
+	AllowOrigins     []string `yaml:"allow_origins"`
+	AllowMethods     []string `yaml:"allow_methods"`
+	AllowHeaders     []string `yaml:"allow_headers"`
+	ExposeHeaders    []string `yaml:"expose_headers"`
+	AllowCredentials bool     `yaml:"allow_credentials"`
+	MaxAge           uint     `yaml:"max_age"`
+}
+
 func InitConfig() {
-	// viper 无法识别环境变量中的下划线
-	// viper.SetConfigName("config")
-	// viper.SetConfigType("yaml")
-	// viper.AddConfigPath("./config")
-
-	// if err := viper.ReadInConfig(); err != nil {
-	// 	log.Fatalf("Error reading config file: %v", err)
-	// }
-
-	// AppConfig = &Config{}
-
-	// if err := viper.Unmarshal(AppConfig); err != nil {
-	// 	log.Fatalf("Unable to decode into struct: %v", err)
-	// }
-
 	dataBytes, err := os.ReadFile("./config/config.yaml")
-
 	if err != nil {
 		log.Fatalf("Error reading config file: %v", err)
 	}
@@ -70,6 +63,7 @@ func InitConfig() {
 	if err := yaml.Unmarshal(dataBytes, &config); err != nil {
 		log.Fatalf("Unable to decode into struct: %v", err)
 	}
-	
+
 	AppConfig = &config
+	log.Printf("%v %T", AppConfig.CORS.AllowOrigins, AppConfig.CORS.AllowOrigins)
 }

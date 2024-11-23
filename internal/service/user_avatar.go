@@ -3,7 +3,11 @@ package service
 import (
 	"fmt"
 	"mime/multipart"
+	"net/http"
+	"path/filepath"
+	"videohub/config"
 	"videohub/internal/repository"
+	"videohub/internal/utils"
 )
 
 type UserAvatar struct {
@@ -17,10 +21,15 @@ func NewUserAvatar(ur *repository.User) *UserAvatar {
 }
 
 // UploadUserAvatar 上传用户头像
-func (uas *UserAvatar) UploadUserAvatar(userID uint, file multipart.File) error {
-	// 调用 user_repository 进行头像上传相关操作
-	// 这里可以是头像文件的存储操作等
-	fmt.Printf("Uploading avatar for user ID: %d\n", userID)
-	// 实现具体的头像上传逻辑，例如保存文件到本地或云存储
-	return nil
+func (uas *UserAvatar) UploadUserAvatar(id uint64, file *multipart.FileHeader) *utils.Response {
+	fileExt := filepath.Ext(file.Filename)
+	filePath := fmt.Sprintf("%s/%d%s", config.AppConfig.Storage.Images, id, fileExt)
+	if err := utils.SaveFile(file, filePath); err != nil {
+		return utils.Error(http.StatusInternalServerError, err.Error())
+	}
+	if err := uas.userRepo.Update(map[string]interface{}{"id": id}, map[string]interface{}{"avatar": filePath}); err != nil {
+		return utils.Error(http.StatusInternalServerError, "更新用户头像信息失败")
+	}
+
+	return utils.Success(http.StatusOK)
 }

@@ -3,7 +3,6 @@ package controller
 import (
 	"fmt"
 	"net/http"
-	"videohub/internal/model"
 	"videohub/internal/service"
 	"videohub/internal/utils"
 
@@ -63,8 +62,7 @@ func (uc *UserController) CreateUser(c *gin.Context) {
 		return
 	}
 
-	var newUser model.User
-	response := uc.userService.CreateUser(request, &newUser)
+	response := uc.userService.CreateUser(request)
 	c.JSON(response.StatusCode, response)
 }
 
@@ -76,18 +74,14 @@ func (uc *UserController) UpdateUser(c *gin.Context) {
 		return
 	}
 
-	// id, err := utils.GetUserID(c) // 从上下文中获取用户 ID
-	// if err != nil {
-	// 	c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()}) // 如果获取 ID 失败，返回 HTTP 400
-	// 	return
-	// }
+	id, err := utils.GetUserID(c) // 从上下文中获取用户 ID
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()}) // 如果获取 ID 失败，返回 HTTP 400
+		return
+	}
 
-	// if err := uc.userService.UpdateUser(oldUser); err != nil {
-	// 	c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()}) // 如果更新用户失败，返回 HTTP 400 和错误信息
-	// 	return
-	// }
-
-	c.JSON(http.StatusOK, gin.H{})
+	response := uc.userService.UpdateUser(id, &request)
+	c.JSON(response.StatusCode, response)
 }
 
 // DeleteUser 根据用户 ID 删除用户
@@ -98,12 +92,8 @@ func (uc *UserController) DeleteUser(c *gin.Context) {
 		return
 	}
 
-	if err := uc.userService.DeleteUser(uint(id)); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()}) // 如果删除用户失败，返回 HTTP 400 和错误信息
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "User deleted successfully"}) // 成功则返回 HTTP 200 和删除成功消息
+	response := uc.userService.DeleteUser(id)
+	c.JSON(response.StatusCode, response)
 }
 
 // UploadAvatar 上传用户头像（携带头像数据）
@@ -115,20 +105,19 @@ func (uc *UserController) UploadAvatar(c *gin.Context) {
 	}
 
 	// 获取上传的头像文件 (multipart form-data)
-	// TODO: 文件类型、大小检查
-	file, _, err := c.Request.FormFile("avatar")
+	file, err := c.FormFile("avatar")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "File upload error"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "form缺少avatar字段"})
+		return
+	}
+	
+	if err := utils.CheckFile(file, []string{".png", ".jpg"}, 8<<20); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	// 调用服务层处理头像上传
-	if err := uc.userAvatarService.UploadUserAvatar(uint(id), file); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "Avatar uploaded successfully"})
+	response := uc.userAvatarService.UploadUserAvatar(id, file)
+	c.JSON(response.StatusCode, response)
 }
 
 // UpdatePassword 修改用户密码
@@ -139,21 +128,14 @@ func (uc *UserController) UpdatePassword(c *gin.Context) {
 		return
 	}
 
-	var passwordData struct {
-		NewPassword string `json:"new_password" binding:"required"`
-	}
-
-	if err := c.ShouldBindJSON(&passwordData); err != nil {
+	var request utils.UpdatePasswordRequest
+	if err := c.ShouldBindJSON(&request); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
 		return
 	}
 
-	if err := uc.userService.UpdateUserPassword(uint64(id), passwordData.NewPassword); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "Password updated successfully"})
+	response := uc.userService.UpdateUserPassword(id, request)
+	c.JSON(response.StatusCode, response)
 }
 
 // SendEmailVerification 发送验证码到邮箱

@@ -2,7 +2,6 @@ package service
 
 import (
 	"errors"
-	"log"
 	"net/http"
 	"time"
 	"videohub/config"
@@ -27,10 +26,10 @@ func NewUser(ur *repository.User, cr *repository.Collection, vr *repository.Vide
 
 func (us *User) Login(request utils.LoginRequest) *utils.Response {
 	var user model.User
-	if err := us.userRepo.SearchByEmail(request.Email, &user); err != nil {
+	if err := us.userRepo.Search(map[string]interface{}{"email": request.Email}, 1, &user); err != nil {
 		return utils.Error(http.StatusUnauthorized, "邮箱未注册")
 	}
-	log.Println(user.Password, request.Password)
+
 	if user.Password != utils.HashPassword(request.Password, user.Salt) {
 		return utils.Error(http.StatusUnauthorized, "邮箱或密码错误")
 	}
@@ -61,8 +60,7 @@ func (us *User) AccessToken(request utils.AccessTokenRequest) *utils.Response {
 		}
 	}
 
-	var user model.User
-	if err := us.userRepo.SearchById(payload.ID, &user); err != nil {
+	if count, err := us.userRepo.Count(map[string]interface{}{"id": payload.ID}); err != nil || count == 0 {
 		return utils.Error(http.StatusUnauthorized, "用户不存在")
 	}
 
@@ -75,87 +73,79 @@ func (us *User) AccessToken(request utils.AccessTokenRequest) *utils.Response {
 }
 
 // GetUserByID 根据用户 ID 获取单个用户信息
-func (us *User) GetUserByID(userID uint64) *utils.Response {
-	// 调用 repository 查询用户
-	user, err := us.userRepo.GetUserByID(userID)
-	if err != nil {
+func (us *User) GetUserByID(id uint64) *utils.Response {
+	var response utils.GetUserResponse
+	if err := us.userRepo.Search(map[string]interface{}{"id": id}, 1, &response); err != nil {
 		return utils.Error(http.StatusNotFound, err.Error())
 	}
-	return utils.Ok(http.StatusOK, user)
+	return utils.Ok(http.StatusOK, response)
 }
 
 // CreateUser 创建新用户
-// TODO: 是否创建钩子函数
-func (us *User) CreateUser(request utils.CreateUserRequest, newUser *model.User) *utils.Response {
-	// 1. 检查用户名是否唯一
-	existingUser, err := us.userRepo.FindUserByUsername(request.Username)
-	if err != nil {
-		return utils.Error(http.StatusInternalServerError, "查询用户名时发生错误")
-	}
-	if existingUser != nil {
-		return utils.Error(http.StatusBadRequest, "用户名已被注册")
+func (us *User) CreateUser(request utils.CreateUserRequest) *utils.Response {
+	if count, err := us.userRepo.Count(map[string]interface{}{"username": request.Username}); err != nil || count == 0 {
+		return utils.Error(http.StatusBadRequest, "该用户名已存在")
 	}
 
-	// 2. 检查邮箱是否唯一
-	existingEmailUser, err := us.userRepo.FindUserByEmail(request.Email)
-	if err != nil {
-		return utils.Error(http.StatusInternalServerError, "查询邮箱时发生错误")
-	}
-	if existingEmailUser != nil {
-		return utils.Error(http.StatusBadRequest, "邮箱已被注册")
+	if count, err := us.userRepo.Count(map[string]interface{}{"email": request.Email}); err != nil || count == 0 {
+		return utils.Error(http.StatusBadRequest, "该邮箱已被注册")
 	}
 
-	// 3. 创建新用户
+	var newUser model.User
 	newUser.Username = request.Username
 	newUser.Salt = utils.GenerateSalt(16)
 	newUser.Password = utils.HashPassword(request.Password, newUser.Salt)
 	newUser.CreatedAt = time.Now().UnixMilli()
 	newUser.Avatar = request.Avatar
 	newUser.Email = request.Email
-	newUser.Status = 1
-	newUser.Role = 0
 
-	// 4. 存储用户信息
-	if err := us.userRepo.CreateUser(newUser); err != nil {
+	if err := us.userRepo.Create(&newUser); err != nil {
 		return utils.Error(http.StatusInternalServerError, "创建用户时发生错误")
 	}
 
-	return utils.Ok(http.StatusCreated, "用户创建成功")
+	return utils.Success(http.StatusCreated)
 }
 
 // UpdateUser 更新用户信息
-func (us *User) UpdateUser(updatedUser *model.User) error {
-	// 调用 repository 更新用户信息
-	if err := us.userRepo.UpdateUser(updatedUser); err != nil {
-		return err
+func (us *User) UpdateUser(id uint64, request *utils.UpdateUserRequest) *utils.Response {
+	values := map[string]interface{}{
+		"username": request.Username,
+		"email": request.Email,
 	}
-	return nil
+	if err := us.userRepo.Update(map[string]interface{}{"id": id}, values); err != nil {
+		return utils.Error(http.StatusInternalServerError, "更新用户失败")
+	}
+
+	return utils.Success(http.StatusOK)
 }
 
 // DeleteUser 根据用户 ID 删除用户
-func (us *User) DeleteUser(userID uint) error {
-	// 调用 repository 删除用户
-	if err := us.userRepo.DeleteUser(userID); err != nil {
-		return err
+func (us *User) DeleteUser(id uint64) *utils.Response {
+	if err := us.userRepo.Delete(map[string]interface{}{"id": id}); err != nil {
+		return utils.Error(http.StatusInternalServerError, "删除用户失败")
 	}
-	return nil
+	return utils.Success(http.StatusOK)
 }
 
 // UpdateUserPassword 更新用户密码
-func (us *User) UpdateUserPassword(userID uint64, newPassword string) error {
-	// 查找用户
-	user, err := us.userRepo.GetUserByID(userID)
-	if err != nil {
-		return err
+func (us *User) UpdateUserPassword(id uint64, request utils.UpdatePasswordRequest) *utils.Response {
+	var result struct {
+		Salt     string
+		Password string
+	}
+	if err := us.userRepo.Search(map[string]interface{}{"id": id}, 1, &result); err != nil {
+		return utils.Error(http.StatusUnauthorized, "用户不存在")
 	}
 
-	// 生成新的盐值并加密新密码
-	user.Salt = utils.GenerateSalt(16)
-	user.Password = utils.HashPassword(newPassword, user.Salt)
-
-	// 更新用户密码
-	if err := us.userRepo.UpdateUser(user); err != nil {
-		return err
+	if utils.HashPassword(request.Password, result.Salt) != result.Password {
+		return utils.Error(http.StatusUnauthorized, "密码错误")
 	}
-	return nil
+
+	salt := utils.GenerateSalt(16)
+	password := utils.HashPassword(request.NewPassword, salt)
+
+	if err := us.userRepo.Update(map[string]interface{}{"id": id}, map[string]interface{}{"salt": salt, "password": password}); err != nil {
+		return utils.Error(http.StatusInternalServerError, "内部错误")
+	}
+	return utils.Success(http.StatusOK)
 }

@@ -15,16 +15,16 @@ func AuthMiddleware(role uint8) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token := c.GetHeader("Authorization")
 		if token == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization token is required"}) // 401
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "token不存在"}) // 401
 			c.Abort()
 			return
 		}
 		payload, err := utils.ParseJWT(token, config.AppConfig.JWT.AccessTokenSecret)
 		if err != nil {
 			if errors.Is(err, jwt.ErrTokenExpired) {
-				c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()}) // 401
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "token失效"}) // 401
 			} else {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"}) // 500
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "内部错误"}) // 500
 			}
 			c.Abort()
 			return
@@ -36,7 +36,7 @@ func AuthMiddleware(role uint8) gin.HandlerFunc {
 			c.Next()
 			return
 		}
-		c.JSON(http.StatusForbidden, gin.H{"error": "forbidden"}) // 403
+		c.JSON(http.StatusForbidden, gin.H{"error": "禁止访问"}) // 403
 		c.Abort()
 	}
 }

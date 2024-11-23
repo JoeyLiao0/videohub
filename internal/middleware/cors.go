@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"time"
+	"videohub/config"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -9,14 +10,14 @@ import (
 
 func CORSMiddleware() gin.HandlerFunc {
 	return cors.New(cors.Config{
-		AllowOrigins: []string{"https://localhost:8080"}, // 允许特定域
-		// AllowMethods:     []string{"GET", "POST", "PUT", "OPTIONS"}, // 允许特定方法
-		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"}, // 允许特定请求头
-		ExposeHeaders:    []string{"Content-Length"},
-		AllowCredentials: true,
+		AllowOrigins:     config.AppConfig.CORS.AllowOrigins,     // 允许所有域名
+		AllowMethods:     config.AppConfig.CORS.AllowMethods,     // 允许特定方法
+		AllowHeaders:     config.AppConfig.CORS.AllowHeaders,     // 允许特定请求头
+		ExposeHeaders:    config.AppConfig.CORS.ExposeHeaders,    // 允许特定响应头
+		AllowCredentials: config.AppConfig.CORS.AllowCredentials, // 允许携带凭证
 		// AllowOriginFunc: func(origin string) bool {
-		//   return origin == "https://github.com"
+		//   return origin == "http://localhost:8080"
 		// },
-		MaxAge: 12 * time.Hour,
+		MaxAge: time.Duration(config.AppConfig.CORS.MaxAge) * time.Second, // 预检请求有效期
 	})
 }

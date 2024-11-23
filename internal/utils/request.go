@@ -18,9 +18,15 @@ type CreateUserRequest struct {
 
 type UpdateUserRequest struct {
 	Username string `json:"username"`
-	Password string `json:"password"`
 	Email    string `json:"email"`
-	Avatar   string `json:"avatar"`
-	Status   uint8  `json:"status"`
-	Role     uint8  `json:"role"`
+	// Code     string `json:"code" binding:"required"`
+}
+
+// type UploadAvatarRequest struct {
+// 	Avatar *multipart.FileHeader `form:"avatar" binding:"required"`
+// }
+
+type UpdatePasswordRequest struct {
+	Password    string `json:"password" binding:"required"`
+	NewPassword string `json:"new_password" binding:"required"`
 }

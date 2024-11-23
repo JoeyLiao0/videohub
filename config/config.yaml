@@ -1,20 +1,37 @@
 run:
-  name: VideoHub
-  ip: localhost
-  port: 8082
+    name: VideoHub
+    ip: localhost
+    port: 8082
 storage:
-  videos_data: storage/videos/data
-  videos_cover: storage/videos/cover
-  videos_chunk: storage/videos/tmp
-  images: storage/images
+    videos_data: storage/videos/data
+    videos_cover: storage/videos/cover
+    videos_chunk: storage/videos/tmp
+    images: storage/images
 mysql:
-  host: localhost
-  port: 3306
-  username: root
-  password: 123456
-  name: test
+    host: localhost
+    port: 3306
+    username: root
+    password: 123456
+    name: test
 jwt:
-  access_token_secret: secret
-  access_token_expire: 3600
-  refresh_token_secret: secret2
-  refresh_token_expire: 86400
+    access_token_secret: secret
+    access_token_expire: 3600
+    refresh_token_secret: secret2
+    refresh_token_expire: 86400
+cors:
+    allow_origins:
+      - "http://localhost:8080"
+    allow_methods:
+      - "GET"
+      - "POST"
+      - "PUT"
+      - "DELETE"
+      - "OPTIONS"
+    allow_headers:
+      - "Origin"
+      - "Content-Type"
+      - "Authorization"
+    expose_headers:
+      - "Content-Length"
+    allow_credentials: true
+    max_age: 86400

@@ -6,6 +6,10 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
+	"mime/multipart"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -88,4 +92,43 @@ func GetUserID(c *gin.Context) (uint64, error) {
 		return 0, errors.New("用户 ID 类型错误")
 	}
 	return id, nil
+}
+
+func CheckFile(file *multipart.FileHeader, types []string, maxSize int64) error {
+	if file.Size > maxSize {
+		return errors.New("文件大小超过限制")
+	}
+
+	fileExt := filepath.Ext(file.Filename)
+	for _, t := range types {
+		if t == fileExt {
+			return nil
+		}
+	}
+
+	return errors.New("文件类型不支持")
+}
+
+func SaveFile(file *multipart.FileHeader, dst string) error {
+	src, err := file.Open()
+	if err != nil {
+		return errors.New("文件打开失败")
+	}
+	defer src.Close()
+
+	if err = os.MkdirAll(filepath.Dir(dst), 0750); err != nil {
+		return errors.New("创建文件夹失败")
+	}
+
+	out, err := os.Create(dst)
+	if err != nil {
+		return errors.New("创建文件失败")
+	}
+	defer out.Close()
+
+	_, err = io.Copy(out, src)
+	if err != nil {
+		return errors.New("拷贝文件失败")
+	}
+	return nil
 }
