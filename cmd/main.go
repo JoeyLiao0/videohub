@@ -13,11 +13,15 @@ import (
 	"os/signal"
 	"time"
 	"videohub/config"
+	"videohub/global"
 	"videohub/internal/router"
+	"videohub/internal/utils"
 )
 
 func main() {
+	global.Ctx = context.Background()
 	config.InitConfig()
+	utils.InitValidator()
 	r := router.InitRouter()
 	// r.Run(config.AppConfig.Run.IP + ":" + config.AppConfig.Run.Port)
 	srv := &http.Server{

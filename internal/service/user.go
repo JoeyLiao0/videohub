@@ -2,9 +2,11 @@ package service
 
 import (
 	"errors"
+	"log"
 	"net/http"
 	"time"
 	"videohub/config"
+	"videohub/global"
 	"videohub/internal/model"
 	"videohub/internal/repository"
 	"videohub/internal/utils"
@@ -83,11 +85,16 @@ func (us *User) GetUserByID(id uint64) *utils.Response {
 
 // CreateUser 创建新用户
 func (us *User) CreateUser(request utils.CreateUserRequest) *utils.Response {
-	if count, err := us.userRepo.Count(map[string]interface{}{"username": request.Username}); err != nil || count == 0 {
+	if code, err := global.Rdb.Get(global.Ctx, request.Email).Result(); err != nil || code != request.Code {
+		return utils.Error(http.StatusBadRequest, "验证码错误或已过期")
+	}
+
+	if count, err := us.userRepo.Count(map[string]interface{}{"username": request.Username}); err != nil || count != 0 {
+		log.Println(request)
 		return utils.Error(http.StatusBadRequest, "该用户名已存在")
 	}
 
-	if count, err := us.userRepo.Count(map[string]interface{}{"email": request.Email}); err != nil || count == 0 {
+	if count, err := us.userRepo.Count(map[string]interface{}{"email": request.Email}); err != nil || count != 0 {
 		return utils.Error(http.StatusBadRequest, "该邮箱已被注册")
 	}
 
@@ -110,7 +117,7 @@ func (us *User) CreateUser(request utils.CreateUserRequest) *utils.Response {
 func (us *User) UpdateUser(id uint64, request *utils.UpdateUserRequest) *utils.Response {
 	values := map[string]interface{}{
 		"username": request.Username,
-		"email": request.Email,
+		"email":    request.Email,
 	}
 	if err := us.userRepo.Update(map[string]interface{}{"id": id}, values); err != nil {
 		return utils.Error(http.StatusInternalServerError, "更新用户失败")
@@ -147,5 +154,19 @@ func (us *User) UpdateUserPassword(id uint64, request utils.UpdatePasswordReques
 	if err := us.userRepo.Update(map[string]interface{}{"id": id}, map[string]interface{}{"salt": salt, "password": password}); err != nil {
 		return utils.Error(http.StatusInternalServerError, "内部错误")
 	}
+	return utils.Success(http.StatusOK)
+}
+
+func (us *User) SendEmailVerification(request utils.SendEmailVerificationRequest) *utils.Response {
+	// if count, err := us.userRepo.Count(map[string]interface{}{"email": request.Email}); err != nil || count == 0 {
+	// 	return utils.Error(http.StatusBadRequest, "该邮箱未注册")
+	// }
+
+	code := utils.GenerateCode(6)
+	global.Rdb.Set(global.Ctx, request.Email, code, time.Minute*time.Duration(config.AppConfig.Email.Expiration))
+	if err := utils.SendEmailVerification(request.Email, code); err != nil {
+		return utils.Error(http.StatusInternalServerError, "发送验证码失败")
+	}
+
 	return utils.Success(http.StatusOK)
 }

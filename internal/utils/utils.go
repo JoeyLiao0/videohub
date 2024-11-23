@@ -1,19 +1,25 @@
 package utils
 
 import (
+	"bytes"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
+	"log"
+	"math/big"
 	"mime/multipart"
 	"os"
 	"path/filepath"
+	"text/template"
 	"time"
+	"videohub/config"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"gopkg.in/gomail.v2"
 )
 
 type Payload struct {
@@ -59,10 +65,77 @@ func ParseJWT(tokenString string, key string) (Payload, error) {
 	}
 }
 
+func GenerateCode(length int) string {
+	// randSource := mrand.New(mrand.NewSource(time.Now().UnixNano()))
+	// code := fmt.Sprintf("%06d", randSource.Intn(1000000))
+	const digits = "0123456789"
+	code := make([]byte, length)
+	for i := range code {
+		randomIndex, err := rand.Int(rand.Reader, big.NewInt(int64(len(digits))))
+		if err != nil {
+			log.Fatal(err.Error())
+		}
+		code[i] = digits[randomIndex.Int64()]
+	}
+	log.Println(string(code))
+	return string(code)
+}
+
+func LoadAndFillTemplate(filePath string, data interface{}) (string, error) {
+	templateFile, err := os.ReadFile(filePath)
+	if err != nil {
+		return "", err
+	}
+
+	tmpl, err := template.New("email").Parse(string(templateFile))
+	if err != nil {
+		log.Println(err.Error())
+		return "", err
+	}
+
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, data); err != nil {
+		return "", err
+	}
+	return buf.String(), nil
+}
+
 // SendEmailVerification 发送邮箱验证
-func SendEmailVerification(email string) error {
-	// 模拟发送验证码到邮箱
-	fmt.Printf("发送验证码到邮箱: %s\n", email)
+func SendEmailVerification(to string, code string) error {
+	username := config.AppConfig.Email.Username
+	password := config.AppConfig.Email.Password
+	host := config.AppConfig.Email.Host
+	port := config.AppConfig.Email.Port
+	// addr := fmt.Sprintf("%s:%d", host, port)
+	// e := email.NewEmail()
+	// e.From = fmt.Sprintf("VideoHub <%s>", username)
+	// e.To = []string{to}
+	// e.Subject = "Verification Code"
+	// e.HTML = []byte(`
+	// 	<h1>Verification Code</h1>
+	// 	<p>Your verification code is: <strong>` + code + `</strong></p>`)
+	// if err := e.Send(addr, smtp.PlainAuth("", username, password, host)); err != nil {
+	// 	log.Println(err.Error()) // EOF
+	// 	return err
+	// }
+	// return nil
+	m := gomail.NewMessage()
+	m.SetHeader("From", fmt.Sprintf("VideoHub <%s>", username))
+	m.SetHeader("To", to)
+	m.SetHeader("Subject", "Verification Code")
+	data, err := LoadAndFillTemplate("template/email.html",
+		map[string]interface{}{"verification_code": code, "expiration_time": config.AppConfig.Email.Expiration})
+	if err != nil {
+		log.Println(err.Error())
+		return errors.New("加载模板文件失败")
+	}
+	m.SetBody("text/html", data)
+
+	d := gomail.NewDialer(host, port, username, password)
+	if err := d.DialAndSend(m); err != nil {
+		log.Println(err.Error())
+		return err
+	}
 	return nil
 }
 
@@ -70,7 +143,7 @@ func SendEmailVerification(email string) error {
 func GenerateSalt(length int) string {
 	bytes := make([]byte, length)
 	if _, err := rand.Read(bytes); err != nil {
-		panic(err)
+		log.Fatal(err.Error())
 	}
 	return hex.EncodeToString(bytes)
 }

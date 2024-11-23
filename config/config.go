@@ -16,6 +16,7 @@ type Config struct {
 	Redis   redisConfig   `yaml:"redis"`
 	JWT     jwtConfig     `yaml:"jwt"`
 	CORS    corsConfig    `yaml:"cors"`
+	Email   emailConfig   `yaml:"email"`
 }
 type runConfig struct {
 	Name string `yaml:"name"`
@@ -59,6 +60,14 @@ type corsConfig struct {
 	ExposeHeaders    []string `yaml:"expose_headers"`
 	AllowCredentials bool     `yaml:"allow_credentials"`
 	MaxAge           uint     `yaml:"max_age"`
+}
+
+type emailConfig struct {
+	Username   string `yaml:"username"`
+	Password   string `yaml:"password"`
+	Host       string `yaml:"host"`
+	Port       int    `yaml:"port"`
+	Expiration int    `yaml:"expiration"`
 }
 
 func InitConfig() {

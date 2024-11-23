@@ -3,6 +3,7 @@ package controller
 import (
 	"fmt"
 	"net/http"
+	"videohub/global"
 	"videohub/internal/service"
 	"videohub/internal/utils"
 
@@ -110,7 +111,7 @@ func (uc *UserController) UploadAvatar(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "form缺少avatar字段"})
 		return
 	}
-	
+
 	if err := utils.CheckFile(file, []string{".png", ".jpg"}, 8<<20); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -130,7 +131,7 @@ func (uc *UserController) UpdatePassword(c *gin.Context) {
 
 	var request utils.UpdatePasswordRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "请求的JSON格式无效或缺少必需字段"})
 		return
 	}
 
@@ -141,21 +142,19 @@ func (uc *UserController) UpdatePassword(c *gin.Context) {
 // SendEmailVerification 发送验证码到邮箱
 // TODO: 采用 gomail + SMTP 发送邮件 (qq 邮箱)
 func (uc *UserController) SendEmailVerification(c *gin.Context) {
-	var emailData struct {
-		Email string `json:"email"`
-	}
+	var request utils.SendEmailVerificationRequest
 
-	if err := c.ShouldBindJSON(&emailData); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "请求的JSON格式无效或缺少必需字段"}) // 如果解析 JSON 失败，返回 HTTP 400
 		return
 	}
 
-	if err := utils.SendEmailVerification(emailData.Email); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if err := global.Validate.Struct(request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "邮箱格式无效"}) // 如果邮箱格式无效，返回 HTTP 400
 		return
 	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "Verification email sent"})
+	response := uc.userService.SendEmailVerification(request)
+	c.JSON(response.StatusCode, response)
 }
 
 // GetVideos 获取用户上传的视频列表

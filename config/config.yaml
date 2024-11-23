@@ -40,3 +40,9 @@ cors:
       - "Content-Length"
     allow_credentials: true
     max_age: 86400
+email:
+    username: "xxx@example.com"
+    password: "your credentials"
+    host: "smtp.example.com"
+    port: 465 # 587
+    expiration: 5 # minutes

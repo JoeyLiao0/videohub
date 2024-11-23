@@ -1,7 +1,6 @@
 package config
 
 import (
-	"context"
 	"log"
 	"videohub/global"
 
@@ -14,11 +13,10 @@ func initRedis() {
 		Password: AppConfig.Redis.Password,
 		DB:       AppConfig.Redis.DB,
 	})
-	_, err := rdb.Ping(context.Background()).Result()
+	_, err := rdb.Ping(global.Ctx).Result()
 	if err != nil {
 		log.Fatalf("Error connecting to redis: %v", err)
 	}
 	log.Println("Connected to redis")
-
 	global.Rdb = rdb
 }

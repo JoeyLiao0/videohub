@@ -13,6 +13,7 @@ type CreateUserRequest struct {
 	Username string `json:"username" binding:"required"`
 	Password string `json:"password" binding:"required"`
 	Email    string `json:"email" binding:"required"`
+	Code     string `json:"code" binding:"required"`
 	Avatar   string `json:"avatar"`
 }
 
@@ -29,4 +30,8 @@ type UpdateUserRequest struct {
 type UpdatePasswordRequest struct {
 	Password    string `json:"password" binding:"required"`
 	NewPassword string `json:"new_password" binding:"required"`
+}
+
+type SendEmailVerificationRequest struct {
+	Email string `json:"email" binding:"required" validate:"email"`
 }
