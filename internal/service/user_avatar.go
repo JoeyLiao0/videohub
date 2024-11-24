@@ -2,7 +2,6 @@ package service
 
 import (
 	"fmt"
-	"mime/multipart"
 	"net/http"
 	"path/filepath"
 	"videohub/config"
@@ -21,13 +20,18 @@ func NewUserAvatar(ur *repository.User) *UserAvatar {
 }
 
 // UploadUserAvatar 上传用户头像
-func (uas *UserAvatar) UploadUserAvatar(id uint64, file *multipart.FileHeader) *utils.Response {
-	fileExt := filepath.Ext(file.Filename)
+func (uas *UserAvatar) UploadUserAvatar(id uint64, request *utils.UploadAvatarRequest) *utils.Response {
+	if err := utils.CheckFile(request.Avatar, []string{".png", ".jpg"}, 8<<20); err != nil {
+		return utils.Error(http.StatusBadRequest, err.Error())
+	}
+
+	fileExt := filepath.Ext(request.Avatar.Filename)
 	filePath := fmt.Sprintf("%s/%d%s", config.AppConfig.Storage.Images, id, fileExt)
-	if err := utils.SaveFile(file, filePath); err != nil {
+	if err := utils.SaveFile(request.Avatar, filePath); err != nil {
 		return utils.Error(http.StatusInternalServerError, err.Error())
 	}
-	if err := uas.userRepo.Update(map[string]interface{}{"id": id}, map[string]interface{}{"avatar": filePath}); err != nil {
+	
+	if err := uas.userRepo.Update(map[string]interface{}{"id": id}, "avatar", map[string]interface{}{"avatar": filePath}); err != nil {
 		return utils.Error(http.StatusInternalServerError, "更新用户头像信息失败")
 	}
 

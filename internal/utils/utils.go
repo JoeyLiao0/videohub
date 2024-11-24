@@ -16,8 +16,8 @@ import (
 	"text/template"
 	"time"
 	"videohub/config"
+	"videohub/global"
 
-	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"gopkg.in/gomail.v2"
 )
@@ -139,6 +139,19 @@ func SendEmailVerification(to string, code string) error {
 	return nil
 }
 
+func VerifyEmailCode(email string, code string) error {
+	c, err := global.Rdb.Get(global.Ctx, email).Result()
+	if err != nil {
+		return errors.New("验证码已过期")
+	}
+	if c != code {
+		return errors.New("验证码错误")
+	}
+	
+	global.Rdb.Del(global.Ctx, email)
+	return nil
+}
+
 // generateSalt 生成随机盐值
 func GenerateSalt(length int) string {
 	bytes := make([]byte, length)
@@ -153,18 +166,6 @@ func HashPassword(password string, salt string) string {
 	saltedPassword := password + salt
 	hash := sha256.Sum256([]byte(saltedPassword))
 	return hex.EncodeToString(hash[:])
-}
-
-func GetUserID(c *gin.Context) (uint64, error) {
-	idValue, exists := c.Get("id")
-	if !exists {
-		return 0, errors.New("上下文中不存在用户 ID")
-	}
-	id, ok := idValue.(uint64)
-	if !ok {
-		return 0, errors.New("用户 ID 类型错误")
-	}
-	return id, nil
 }
 
 func CheckFile(file *multipart.FileHeader, types []string, maxSize int64) error {

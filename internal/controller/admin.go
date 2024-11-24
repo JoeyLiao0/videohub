@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 	"videohub/internal/service"
-	"videohub/internal/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -23,7 +22,7 @@ func NewAdminController(uas *service.UserAvatar, uls *service.UserList, us *serv
 
 // GetUser 获取管理员个人信息
 func (ac *AdminController) GetUser(c *gin.Context) {
-	id, err := utils.GetUserID(c) // 从上下文中获取用户 ID
+	id, err := GetUserID(c) // 从上下文中获取用户 ID
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()}) // 如果获取 ID 失败，返回 HTTP 400
 		return

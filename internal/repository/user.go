@@ -30,8 +30,8 @@ func (ur *User) Count(conditions interface{}) (int64, error) {
 	return count, err
 }
 
-func (ur *User) Update(conditions interface{}, values interface{}) error {
-	return ur.dB.Model(&model.User{}).Where(conditions).Updates(values).Error
+func (ur *User) Update(conditions interface{}, fields interface{}, values interface{}) error {
+	return ur.dB.Model(&model.User{}).Where(conditions).Select(fields).Updates(values).Error
 }
 
 func (ur *User) Delete(conditions interface{}) error {

@@ -85,10 +85,6 @@ func (us *User) GetUserByID(id uint64) *utils.Response {
 
 // CreateUser 创建新用户
 func (us *User) CreateUser(request utils.CreateUserRequest) *utils.Response {
-	if code, err := global.Rdb.Get(global.Ctx, request.Email).Result(); err != nil || code != request.Code {
-		return utils.Error(http.StatusBadRequest, "验证码错误或已过期")
-	}
-
 	if count, err := us.userRepo.Count(map[string]interface{}{"username": request.Username}); err != nil || count != 0 {
 		log.Println(request)
 		return utils.Error(http.StatusBadRequest, "该用户名已存在")
@@ -96,6 +92,10 @@ func (us *User) CreateUser(request utils.CreateUserRequest) *utils.Response {
 
 	if count, err := us.userRepo.Count(map[string]interface{}{"email": request.Email}); err != nil || count != 0 {
 		return utils.Error(http.StatusBadRequest, "该邮箱已被注册")
+	}
+
+	if err := utils.VerifyEmailCode(request.Email, request.Code); err != nil {
+		return utils.Error(http.StatusBadRequest, err.Error())
 	}
 
 	var newUser model.User
@@ -114,12 +114,28 @@ func (us *User) CreateUser(request utils.CreateUserRequest) *utils.Response {
 }
 
 // UpdateUser 更新用户信息
-func (us *User) UpdateUser(id uint64, request *utils.UpdateUserRequest) *utils.Response {
-	values := map[string]interface{}{
-		"username": request.Username,
-		"email":    request.Email,
+func (us *User) UpdateUser(id uint64, fileds interface{}, request *utils.UpdateUserRequest) *utils.Response {
+	if request.Email != "" {
+		if count, err := us.userRepo.Count(map[string]interface{}{"email": request.Email}); err != nil || count != 0 {
+			return utils.Error(http.StatusBadRequest, "该邮箱已被注册")
+		}
+
+		if request.Code == "" {
+			return utils.Error(http.StatusBadRequest, "验证码不能为空")
+		}
+
+		if err := utils.VerifyEmailCode(request.Email, request.Code); err != nil {
+			return utils.Error(http.StatusBadRequest, err.Error())
+		}
 	}
-	if err := us.userRepo.Update(map[string]interface{}{"id": id}, values); err != nil {
+
+	if request.Username != "" {
+		if count, err := us.userRepo.Count(map[string]interface{}{"username": request.Username}); err != nil || count != 0 {
+			return utils.Error(http.StatusBadRequest, "该用户名已被注册")
+		}
+	}
+
+	if err := us.userRepo.Update(map[string]interface{}{"id": id}, fileds, request); err != nil {
 		return utils.Error(http.StatusInternalServerError, "更新用户失败")
 	}
 
@@ -137,6 +153,7 @@ func (us *User) DeleteUser(id uint64) *utils.Response {
 // UpdateUserPassword 更新用户密码
 func (us *User) UpdateUserPassword(id uint64, request utils.UpdatePasswordRequest) *utils.Response {
 	var result struct {
+		Email    string
 		Salt     string
 		Password string
 	}
@@ -148,20 +165,20 @@ func (us *User) UpdateUserPassword(id uint64, request utils.UpdatePasswordReques
 		return utils.Error(http.StatusUnauthorized, "密码错误")
 	}
 
+	if err := utils.VerifyEmailCode(result.Email, request.Code); err != nil {
+		return utils.Error(http.StatusBadRequest, err.Error())
+	}
+
 	salt := utils.GenerateSalt(16)
 	password := utils.HashPassword(request.NewPassword, salt)
 
-	if err := us.userRepo.Update(map[string]interface{}{"id": id}, map[string]interface{}{"salt": salt, "password": password}); err != nil {
+	if err := us.userRepo.Update(map[string]interface{}{"id": id}, []string{"salt", "password"}, map[string]interface{}{"salt": salt, "password": password}); err != nil {
 		return utils.Error(http.StatusInternalServerError, "内部错误")
 	}
 	return utils.Success(http.StatusOK)
 }
 
 func (us *User) SendEmailVerification(request utils.SendEmailVerificationRequest) *utils.Response {
-	// if count, err := us.userRepo.Count(map[string]interface{}{"email": request.Email}); err != nil || count == 0 {
-	// 	return utils.Error(http.StatusBadRequest, "该邮箱未注册")
-	// }
-
 	code := utils.GenerateCode(6)
 	global.Rdb.Set(global.Ctx, request.Email, code, time.Minute*time.Duration(config.AppConfig.Email.Expiration))
 	if err := utils.SendEmailVerification(request.Email, code); err != nil {

@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"videohub/global"
@@ -18,6 +19,18 @@ type UserController struct {
 
 func NewUserController(uas *service.UserAvatar, uls *service.UserList, us *service.User) *UserController {
 	return &(UserController{userAvatarService: uas, userListService: uls, userService: us})
+}
+
+func GetUserID(c *gin.Context) (uint64, error) {
+	idValue, exists := c.Get("id")
+	if !exists {
+		return 0, errors.New("上下文中不存在用户 ID")
+	}
+	id, ok := idValue.(uint64)
+	if !ok {
+		return 0, errors.New("用户 ID 类型错误")
+	}
+	return id, nil
 }
 
 // Login 用户登录处理函数，返回范文令牌和刷新令牌给前端
@@ -44,7 +57,7 @@ func (uc *UserController) AccessToken(c *gin.Context) {
 
 // GetUserInfo 获取某个用户信息 (根据用户的 access_token 拿到 id)
 func (uc *UserController) GetUser(c *gin.Context) {
-	id, err := utils.GetUserID(c) // 从上下文中获取用户 ID
+	id, err := GetUserID(c) // 从上下文中获取用户 ID
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()}) // 如果获取 ID 失败，返回 HTTP 500
 		return
@@ -63,31 +76,49 @@ func (uc *UserController) CreateUser(c *gin.Context) {
 		return
 	}
 
+	if err := global.Validate.Struct(request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "邮箱格式无效"}) // 如果邮箱格式无效，返回 HTTP 400
+		return
+	}
+
 	response := uc.userService.CreateUser(request)
 	c.JSON(response.StatusCode, response)
 }
 
 // UpdateUser 根据用户 ID 更新用户信息
 func (uc *UserController) UpdateUser(c *gin.Context) {
+	id, err := GetUserID(c) // 从上下文中获取用户 ID
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()}) // 如果获取 ID 失败，返回 HTTP 400
+		return
+	}
+
 	var request utils.UpdateUserRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "请求的JSON格式无效或缺少必需字段"}) // 如果解析 JSON 失败，返回 HTTP 400
 		return
 	}
 
-	id, err := utils.GetUserID(c) // 从上下文中获取用户 ID
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()}) // 如果获取 ID 失败，返回 HTTP 400
-		return
+	var fileds []string
+	if request.Email != "" {
+		if err := global.Validate.Struct(request); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "邮箱格式无效"}) // 如果邮箱格式无效，返回 HTTP 400
+			return
+		}
+		fileds = append(fileds, "email")
 	}
 
-	response := uc.userService.UpdateUser(id, &request)
+	if request.Username != "" {
+		fileds = append(fileds, "username")
+	}
+
+	response := uc.userService.UpdateUser(id, fileds, &request)
 	c.JSON(response.StatusCode, response)
 }
 
 // DeleteUser 根据用户 ID 删除用户
 func (uc *UserController) DeleteUser(c *gin.Context) {
-	id, err := utils.GetUserID(c) // 从上下文中获取用户 ID
+	id, err := GetUserID(c) // 从上下文中获取用户 ID
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()}) // 如果获取 ID 失败，返回 HTTP 400
 		return
@@ -99,31 +130,25 @@ func (uc *UserController) DeleteUser(c *gin.Context) {
 
 // UploadAvatar 上传用户头像（携带头像数据）
 func (uc *UserController) UploadAvatar(c *gin.Context) {
-	id, err := utils.GetUserID(c) // 从上下文中获取用户 ID
+	id, err := GetUserID(c) // 从上下文中获取用户 ID
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()}) // 如果获取 ID 失败，返回 HTTP 400
 		return
 	}
 
-	// 获取上传的头像文件 (multipart form-data)
-	file, err := c.FormFile("avatar")
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "form缺少avatar字段"})
+	var request utils.UploadAvatarRequest
+	if err := c.ShouldBind(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "请求的Form格式无效或缺少必需字段"})
 		return
 	}
 
-	if err := utils.CheckFile(file, []string{".png", ".jpg"}, 8<<20); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	response := uc.userAvatarService.UploadUserAvatar(id, file)
+	response := uc.userAvatarService.UploadUserAvatar(id, &request)
 	c.JSON(response.StatusCode, response)
 }
 
 // UpdatePassword 修改用户密码
 func (uc *UserController) UpdatePassword(c *gin.Context) {
-	id, err := utils.GetUserID(c) // 从上下文中获取用户 ID
+	id, err := GetUserID(c) // 从上下文中获取用户 ID
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()}) // 如果获取 ID 失败，返回 HTTP 400
 		return
@@ -135,12 +160,17 @@ func (uc *UserController) UpdatePassword(c *gin.Context) {
 		return
 	}
 
+	if err := global.Validate.Struct(request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "邮箱格式无效"}) // 如果邮箱格式无效，返回 HTTP 400
+		return
+	}
+
 	response := uc.userService.UpdateUserPassword(id, request)
 	c.JSON(response.StatusCode, response)
 }
 
 // SendEmailVerification 发送验证码到邮箱
-// TODO: 采用 gomail + SMTP 发送邮件 (qq 邮箱)
+// 采用 gomail + SMTP 发送邮件 (163 邮箱)
 func (uc *UserController) SendEmailVerification(c *gin.Context) {
 	var request utils.SendEmailVerificationRequest
 
@@ -153,13 +183,14 @@ func (uc *UserController) SendEmailVerification(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "邮箱格式无效"}) // 如果邮箱格式无效，返回 HTTP 400
 		return
 	}
+
 	response := uc.userService.SendEmailVerification(request)
 	c.JSON(response.StatusCode, response)
 }
 
 // GetVideos 获取用户上传的视频列表
 func (uc *UserController) GetVideos(c *gin.Context) {
-	id, err := utils.GetUserID(c) // 从上下文中获取用户 ID
+	id, err := GetUserID(c) // 从上下文中获取用户 ID
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()}) // 如果获取 ID 失败，返回 HTTP 400
 		return
@@ -170,7 +201,7 @@ func (uc *UserController) GetVideos(c *gin.Context) {
 
 // DeleteVideo 删除用户上传的视频
 func (uc *UserController) DeleteVideo(c *gin.Context) {
-	id, err := utils.GetUserID(c) // 从上下文中获取用户 ID
+	id, err := GetUserID(c) // 从上下文中获取用户 ID
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()}) // 如果获取 ID 失败，返回 HTTP 400
 		return
@@ -181,7 +212,7 @@ func (uc *UserController) DeleteVideo(c *gin.Context) {
 
 // GetCollections 获取用户收藏的视频列表
 func (uc *UserController) GetCollections(c *gin.Context) {
-	id, err := utils.GetUserID(c) // 从上下文中获取用户 ID
+	id, err := GetUserID(c) // 从上下文中获取用户 ID
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()}) // 如果获取 ID 失败，返回 HTTP 400
 		return
@@ -192,7 +223,7 @@ func (uc *UserController) GetCollections(c *gin.Context) {
 
 // UpdateCollections 更新用户收藏的视频
 func (uc *UserController) UpdateCollections(c *gin.Context) {
-	id, err := utils.GetUserID(c) // 从上下文中获取用户 ID
+	id, err := GetUserID(c) // 从上下文中获取用户 ID
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()}) // 如果获取 ID 失败，返回 HTTP 400
 		return
@@ -203,7 +234,7 @@ func (uc *UserController) UpdateCollections(c *gin.Context) {
 
 // DeleteCollections 删除用户收藏的视频
 func (uc *UserController) DeleteCollections(c *gin.Context) {
-	id, err := utils.GetUserID(c) // 从上下文中获取用户 ID
+	id, err := GetUserID(c) // 从上下文中获取用户 ID
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()}) // 如果获取 ID 失败，返回 HTTP 400
 		return

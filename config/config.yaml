@@ -44,5 +44,5 @@ email:
     username: "xxx@example.com"
     password: "your credentials"
     host: "smtp.example.com"
-    port: 465 # 587
-    expiration: 5 # minutes
+    port: 465  # 587
+    expiration: 5  # minutes
