@@ -7,6 +7,7 @@ import (
 	"videohub/config"
 	"videohub/internal/repository"
 	"videohub/internal/utils"
+	"videohub/internal/utils/user"
 )
 
 type UserAvatar struct {
@@ -20,7 +21,7 @@ func NewUserAvatar(ur *repository.User) *UserAvatar {
 }
 
 // UploadUserAvatar 上传用户头像
-func (uas *UserAvatar) UploadUserAvatar(id uint64, request *utils.UploadAvatarRequest) *utils.Response {
+func (uas *UserAvatar) UploadUserAvatar(id uint64, request *user.UploadAvatarRequest) *utils.Response {
 	if err := utils.CheckFile(request.Avatar, []string{".png", ".jpg"}, 8<<20); err != nil {
 		return utils.Error(http.StatusBadRequest, err.Error())
 	}

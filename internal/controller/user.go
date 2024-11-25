@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"videohub/global"
 	"videohub/internal/service"
-	"videohub/internal/utils"
+	"videohub/internal/utils/user"
 
 	"github.com/gin-gonic/gin"
 )
@@ -35,7 +35,7 @@ func GetUserID(c *gin.Context) (uint64, error) {
 
 // Login 用户登录处理函数，返回范文令牌和刷新令牌给前端
 func (uc *UserController) Login(c *gin.Context) {
-	var request utils.LoginRequest
+	var request user.LoginRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "请求的JSON格式无效或缺少必需字段"})
 		return
@@ -46,7 +46,7 @@ func (uc *UserController) Login(c *gin.Context) {
 
 // AccessToken 获取访问令牌处理函数，返回访问令牌给前端
 func (uc *UserController) AccessToken(c *gin.Context) {
-	var request utils.AccessTokenRequest
+	var request user.AccessTokenRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "请求的JSON格式无效或缺少必需字段"})
 		return
@@ -69,7 +69,7 @@ func (uc *UserController) GetUser(c *gin.Context) {
 
 // CreateUser 创建新用户
 func (uc *UserController) CreateUser(c *gin.Context) {
-	var request utils.CreateUserRequest
+	var request user.CreateUserRequest
 
 	if err := c.ShouldBindJSON(&request); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "请求的JSON格式无效或缺少必需字段"})
@@ -93,7 +93,7 @@ func (uc *UserController) UpdateUser(c *gin.Context) {
 		return
 	}
 
-	var request utils.UpdateUserRequest
+	var request user.UpdateUserRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "请求的JSON格式无效或缺少必需字段"}) // 如果解析 JSON 失败，返回 HTTP 400
 		return
@@ -136,7 +136,7 @@ func (uc *UserController) UploadAvatar(c *gin.Context) {
 		return
 	}
 
-	var request utils.UploadAvatarRequest
+	var request user.UploadAvatarRequest
 	if err := c.ShouldBind(&request); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "请求的Form格式无效或缺少必需字段"})
 		return
@@ -154,7 +154,7 @@ func (uc *UserController) UpdatePassword(c *gin.Context) {
 		return
 	}
 
-	var request utils.UpdatePasswordRequest
+	var request user.UpdatePasswordRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "请求的JSON格式无效或缺少必需字段"})
 		return
@@ -172,7 +172,7 @@ func (uc *UserController) UpdatePassword(c *gin.Context) {
 // SendEmailVerification 发送验证码到邮箱
 // 采用 gomail + SMTP 发送邮件 (163 邮箱)
 func (uc *UserController) SendEmailVerification(c *gin.Context) {
-	var request utils.SendEmailVerificationRequest
+	var request user.SendEmailVerificationRequest
 
 	if err := c.ShouldBindJSON(&request); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "请求的JSON格式无效或缺少必需字段"}) // 如果解析 JSON 失败，返回 HTTP 400

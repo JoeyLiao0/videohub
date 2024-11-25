@@ -22,6 +22,30 @@ import (
 	"gopkg.in/gomail.v2"
 )
 
+type Response struct {
+	StatusCode int         `json:"-"`
+	ErrorMsg   string      `json:"error,omitempty"`
+	Data       interface{} `json:"data,omitempty"`
+	Status     bool        `json:"status,omitempty"`
+}
+
+func Success(statusCode int) *Response {
+	return &Response{StatusCode: statusCode, Status: true}
+}
+
+func Fail(statusCode int) *Response {
+	return &Response{StatusCode: statusCode, Status: false}
+}
+
+func Ok(statusCode int, data interface{}) *Response {
+	return &Response{StatusCode: statusCode, Data: data, Status: true}
+}
+
+func Error(statusCode int, errorMsg string) *Response {
+	return &Response{StatusCode: statusCode, ErrorMsg: errorMsg, Status: false}
+}
+
+
 type Payload struct {
 	ID   uint64 `json:"id"`
 	Role uint8  `json:"role"`
@@ -147,7 +171,7 @@ func VerifyEmailCode(email string, code string) error {
 	if c != code {
 		return errors.New("验证码错误")
 	}
-	
+
 	global.Rdb.Del(global.Ctx, email)
 	return nil
 }

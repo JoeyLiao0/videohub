@@ -1,4 +1,4 @@
-package utils
+package user
 
 import "mime/multipart"
 
