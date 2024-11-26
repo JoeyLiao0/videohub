@@ -112,3 +112,41 @@ func (vr *Video) SaveCompleteVideo(video model.Video) error {
 	// GORM创建新纪录
 	return vr.DB.Create(&video).Error
 }
+
+// UpdateVideoStatus 更新视频状态
+func (vr *Video) UpdateVideoStatus(id int64, newStatus int8) error {
+	result := vr.DB.Model(&model.Video{}).Where("upload_id = ?", id).Update("video_status", newStatus)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return errors.New("视频未找到")
+	}
+	return nil
+}
+
+// 查询视频列表
+func (vr *Video) FindVideos(status *int, like *string, offset, limit int) ([]model.Video, int64, error) {
+	var videos []model.Video
+	var total int64
+
+	query := vr.DB.Model(&model.Video{})
+
+	// 状态筛选
+	if status != nil {
+		query = query.Where("video_status = ?", *status)
+	}
+
+	// 标题模糊搜索
+	if like != nil {
+		query = query.Where("title LIKE ?", "%"+*like+"%")
+	}
+
+	// 分页查询
+	err := query.Count(&total).Offset(offset).Limit(limit).Find(&videos).Error
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return videos, total, nil
+}

@@ -19,7 +19,7 @@ type VideoUpload struct {
 	videoRepo *repository.Video
 }
 
-func NewVideoUploadService(vr *repository.Video) *VideoUpload {
+func NewVideoUpload(vr *repository.Video) *VideoUpload {
 	return &VideoUpload{videoRepo: vr}
 }
 

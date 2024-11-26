@@ -24,7 +24,7 @@ func initDB() {
 
 	logrus.Info("Database connected successfully")
 
-	db.AutoMigrate(&model.User{}, &model.Video{}, &model.VideoChunk{})
+	db.AutoMigrate(&model.User{}, &model.Video{}, &model.VideoChunk{}, &model.Comment{})
 
 	// todo: 数据库的一些其他设置
 	global.DB = db

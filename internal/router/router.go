@@ -19,16 +19,20 @@ func InitRouter() *gin.Engine {
 	collectionRepo := repository.NewCollection(db)
 	userRepo := repository.NewUser(db)
 	videoRepo := repository.NewVideo(db)
+	commentRepo := repository.NewComment(db)
 
 	//2、repository 到 service
 	userAvatarService := service.NewUserAvatar(userRepo)
 	userListService := service.NewUserList(userRepo)
 	userService := service.NewUser(userRepo, collectionRepo, videoRepo)
-	videoUploadService := service.NewVideoUploadService(videoRepo)
+	videoUploadService := service.NewVideoUpload(videoRepo)
+	VideoUpdateStatusService := service.NewVideoUpdateStatus(videoRepo)
+	videoSearchService := service.NewVideoSearch(videoRepo)
+	commentService := service.NewCommentService(commentRepo)
 
 	//3、service 到 controller
 	userController := controller.NewUserController(userAvatarService, userListService, userService)
-	videoController := controller.NewVideoController(videoUploadService)
+	videoController := controller.NewVideoController(videoUploadService, VideoUpdateStatusService, videoSearchService, commentService)
 	adminController := controller.NewAdminController(userAvatarService, userListService, userService)
 
 	// r := gin.Default()
@@ -118,6 +122,7 @@ func InitRouter() *gin.Engine {
 		{
 			// 视频点赞
 			videoRouter.POST("/:vid", videoController.LikeVideo)
+			videoRouter.PUT("/videos/:id", videoController.UpdateVideoStatus)
 			// 新增视频评论
 			videoRouter.POST("/:vid/comments", videoController.AddComment)
 			// 评论点赞
