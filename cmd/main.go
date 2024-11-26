@@ -1,13 +1,7 @@
-/*
-*@auther:廖嘉鹏
-*项目的启动文件
- */
-
 package main
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -16,6 +10,8 @@ import (
 	"videohub/global"
 	"videohub/internal/router"
 	"videohub/internal/utils"
+
+	"github.com/sirupsen/logrus"
 )
 
 func main() {
@@ -23,7 +19,6 @@ func main() {
 	config.InitConfig()
 	utils.InitValidator()
 	r := router.InitRouter()
-	// r.Run(config.AppConfig.Run.IP + ":" + config.AppConfig.Run.Port)
 	srv := &http.Server{
 		Addr:    config.AppConfig.Run.Host + ":" + config.AppConfig.Run.Port,
 		Handler: r,
@@ -32,7 +27,7 @@ func main() {
 	go func() {
 		// 服务连接
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("listen: %s\n", err)
+			logrus.Fatalf("listen: %s\n", err)
 		}
 	}()
 
@@ -40,12 +35,12 @@ func main() {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt)
 	<-quit
-	log.Println("Shutdown Server ...")
+	logrus.Info("Shutdown Server ...")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err := srv.Shutdown(ctx); err != nil {
-		log.Fatal("Server Shutdown:", err)
+		logrus.Fatal("Server Shutdown:", err)
 	}
-	log.Println("Server exiting")
+	logrus.Infoln("Server exiting")
 }

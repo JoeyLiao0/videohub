@@ -2,13 +2,13 @@ package middleware
 
 import (
 	"errors"
-	"log"
 	"net/http"
 	"videohub/config"
 	"videohub/internal/utils"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/sirupsen/logrus"
 )
 
 func AuthMiddleware(role uint8) gin.HandlerFunc {
@@ -29,7 +29,7 @@ func AuthMiddleware(role uint8) gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		log.Printf("role: %v %T", payload.Role, payload.Role)
+		logrus.Debugf("role: %v %T", payload.Role, payload.Role)
 		if payload.Role == role {
 			c.Set("id", payload.ID)
 			c.Set("role", payload.Role)

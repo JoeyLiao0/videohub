@@ -2,16 +2,18 @@ package router
 
 import (
 	"videohub/config"
+	"videohub/global"
 	"videohub/internal/controller"
 	"videohub/internal/middleware"
 	"videohub/internal/repository"
 	"videohub/internal/service"
 
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
 )
 
 func InitRouter() *gin.Engine {
-	db := config.InitDB()
+	db := global.DB
 
 	//1、db 到 repository
 	collectionRepo := repository.NewCollection(db)
@@ -29,10 +31,15 @@ func InitRouter() *gin.Engine {
 	videoController := controller.NewVideoController(videoUploadService)
 	adminController := controller.NewAdminController(userAvatarService, userListService, userService)
 
-	r := gin.Default()
+	// r := gin.Default()
+	r := gin.New()
+	r.Use(gin.Recovery())
+	r.Use(gin.Logger())
 	// 为 multipart forms 设置较低的内存限制 (默认是 32 MiB)
 	// r.MaxMultipartMemory = 8 << 20  // 8 MiB
 
+	// 日志中间件
+	r.Use(middleware.LoggerMiddleware())
 	// CORS 跨域中间件
 	r.Use(middleware.CORSMiddleware())
 
@@ -129,5 +136,7 @@ func InitRouter() *gin.Engine {
 		// 发送邮箱验证码
 		apiRouter.POST("/email", userController.SendEmailVerification)
 	}
+
+	logrus.Info("router initialized successfully")
 	return r
 }

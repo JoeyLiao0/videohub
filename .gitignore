@@ -31,3 +31,4 @@ test.go
 .air.toml
 
 storage/
+logs/

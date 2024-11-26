@@ -1,10 +1,10 @@
 package config
 
 import (
-	"log"
 	"videohub/global"
 
 	"github.com/redis/go-redis/v9"
+	"github.com/sirupsen/logrus"
 )
 
 func initRedis() {
@@ -15,8 +15,8 @@ func initRedis() {
 	})
 	_, err := rdb.Ping(global.Ctx).Result()
 	if err != nil {
-		log.Fatalf("Error connecting to redis: %v", err)
+		logrus.Fatalf("Error connecting to redis: %v", err)
 	}
-	log.Println("Connected to redis")
+	logrus.Info("Redis connected successfully")
 	global.Rdb = rdb
 }

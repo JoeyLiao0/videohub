@@ -1,9 +1,10 @@
 package config
 
 import (
-	"log"
 	"os"
+	"videohub/logger"
 
+	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 )
 
@@ -19,9 +20,10 @@ type Config struct {
 	Email   emailConfig   `yaml:"email"`
 }
 type runConfig struct {
-	Name string `yaml:"name"`
-	Host string `yaml:"host"`
-	Port string `yaml:"port"`
+	Name  string `yaml:"name"`
+	Host  string `yaml:"host"`
+	Port  string `yaml:"port"`
+	Debug bool   `yaml:"debug"`
 }
 
 type storageConfig struct {
@@ -73,15 +75,18 @@ type emailConfig struct {
 func InitConfig() {
 	dataBytes, err := os.ReadFile("./config/config.yaml")
 	if err != nil {
-		log.Fatalf("Error reading config file: %v", err)
+		logrus.Fatalf("Error reading config file: %v", err)
 	}
 
 	config := Config{}
 	if err := yaml.Unmarshal(dataBytes, &config); err != nil {
-		log.Fatalf("Unable to decode into struct: %v", err)
+		logrus.Fatalf("Unable to decode into struct: %v", err)
 	}
 
 	AppConfig = &config
-
+	logger.InitLogger(AppConfig.Run.Debug)
+	
+	logrus.Info("Config loaded successfully")
+	initDB()
 	initRedis()
 }

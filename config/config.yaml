@@ -2,6 +2,7 @@ run:
     name: VideoHub
     host: localhost
     port: 8082
+    debug: true
 storage:
     videos_data: storage/videos/data
     videos_cover: storage/videos/cover
@@ -25,24 +26,24 @@ jwt:
     refresh_token_expire: 86400
 cors:
     allow_origins:
-      - "http://localhost:8080"
+        - "http://localhost:8080"
     allow_methods:
-      - "GET"
-      - "POST"
-      - "PUT"
-      - "DELETE"
-      - "OPTIONS"
+        - "GET"
+        - "POST"
+        - "PUT"
+        - "DELETE"
+        - "OPTIONS"
     allow_headers:
-      - "Origin"
-      - "Content-Type"
-      - "Authorization"
+        - "Origin"
+        - "Content-Type"
+        - "Authorization"
     expose_headers:
-      - "Content-Length"
+        - "Content-Length"
     allow_credentials: true
     max_age: 86400
 email:
     username: "xxx@example.com"
     password: "your credentials"
     host: "smtp.example.com"
-    port: 465  # 587
-    expiration: 5  # minutes
+    port: 465 # 587
+    expiration: 5 # minutes
