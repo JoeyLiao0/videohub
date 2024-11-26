@@ -42,5 +42,7 @@ func main() {
 	if err := srv.Shutdown(ctx); err != nil {
 		logrus.Fatal("Server Shutdown:", err)
 	}
-	logrus.Infoln("Server exiting")
+	logrus.Info("Server exiting")
+	logrus.Info()
+	logrus.Info()
 }

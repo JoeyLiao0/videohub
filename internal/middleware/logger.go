@@ -25,8 +25,7 @@ func LoggerMiddleware() gin.HandlerFunc {
 			path = path + "?" + raw
 		}
 
-		log := logger.FileLogger
-		log.Infof("[GIN] %v | %3d | %13v | %15s | %-7s %#v\n%s",
+		logger.FileLogger.Infof("[GIN] %v | %3d | %13v | %15s | %-7s %#v\n%s",
 			timeStamp.Format("2006/01/02 - 15:04:05"),
 			statusCode,
 			latency,

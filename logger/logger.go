@@ -87,7 +87,11 @@ func (hook *myHook) Levels() []logrus.Level {
 }
 
 func (hook *myHook) Fire(entry *logrus.Entry) error {
-	msg := logMessage(entry, false)
+	msg := ""
+	if entry.Message != "" {
+		msg = logMessage(entry, false)
+	}
+	msg += "\n"
 	switch entry.Level {
 	case logrus.InfoLevel:
 		FileLogger.Info(msg)
@@ -106,13 +110,16 @@ func (hook *myHook) Fire(entry *logrus.Entry) error {
 type fileFormatter struct{}
 
 func (f *fileFormatter) Format(entry *logrus.Entry) ([]byte, error) {
-	return []byte(entry.Message + "\n"), nil
+	return []byte(entry.Message), nil
 }
 
 type myFormatter struct{}
 
 func (g *myFormatter) Format(entry *logrus.Entry) ([]byte, error) {
-	msg := logMessage(entry, true)
+	msg := ""
+	if entry.Message != "" {
+		msg = logMessage(entry, true)
+	}
 	return []byte(msg + "\n"), nil
 }
 
@@ -121,6 +128,7 @@ func InitLogger(debug bool) {
 	FileLogger = logrus.New()
 	FileLogger.AddHook(hook)
 	FileLogger.SetFormatter(&fileFormatter{})
+	FileLogger.SetLevel(logrus.InfoLevel)
 
 	logrus.SetReportCaller(true)
 	logrus.SetFormatter(&myFormatter{})
