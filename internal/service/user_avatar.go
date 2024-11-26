@@ -23,7 +23,7 @@ func NewUserAvatar(ur *repository.User) *UserAvatar {
 }
 
 // UploadUserAvatar 上传用户头像
-func (uas *UserAvatar) UploadUserAvatar(id uint64, request *user.UploadAvatarRequest) *utils.Response {
+func (uas *UserAvatar) UploadUserAvatar(id uint, request *user.UploadAvatarRequest) *utils.Response {
 	if err := utils.CheckFile(request.Avatar, []string{".png", ".jpg"}, 8<<20); err != nil {
 		logrus.Debug(err.Error())
 		return utils.Error(http.StatusBadRequest, err.Error())

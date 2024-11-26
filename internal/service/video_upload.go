@@ -1,18 +1,16 @@
 package service
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
-	"io"
-	"log"
-	"mime/multipart"
-	"os"
+	"net/http"
 	"path/filepath"
-	"strconv"
 	"videohub/config"
 	"videohub/internal/model"
 	"videohub/internal/repository"
+	"videohub/internal/utils"
+	"videohub/internal/utils/video"
+
+	"github.com/sirupsen/logrus"
 )
 
 type VideoUpload struct {
@@ -28,150 +26,98 @@ func NewVideoUpload(vr *repository.Video) *VideoUpload {
 *@create_at:2024/11/7
  */
 
-func (vus *VideoUpload) HandleVideoChunk(videoChunk model.VideoChunk, fileHeader *multipart.FileHeader) error {
-	file, err := fileHeader.Open()
-	if err != nil {
-		log.Printf("failed to open file: %v", err)
-		return err
-	}
-	// defer最后关闭文件
-	defer file.Close()
-	fileSize := fileHeader.Size
+func (vus *VideoUpload) HandleVideoChunk(request *video.UploadChunkRequest) *utils.Response {
+	fileSize := request.ChunkData.Size
 
 	// 验证切片大小(byte)
-	if fileSize != int64(videoChunk.ChunkSize) {
-		err := fmt.Errorf("chunk size mismatch: expected %d, got %d", videoChunk.ChunkSize, fileSize)
-		log.Println(err)
-		return err
+	if fileSize != int64(request.ChunkSize) {
+		logrus.Debugf("chunk size mismatch: expected %d, got %d", request.ChunkSize, fileSize)
+		return utils.Error(http.StatusBadRequest, "分片大小不匹配")
 	}
 
-	// 验证哈希值(sha256)
-	hasher := sha256.New()
-	if _, err := io.Copy(hasher, file); err != nil {
-		log.Printf("failed to calculate hash: %v", err)
-		return err
-	}
-	calculatedHash := hex.EncodeToString(hasher.Sum(nil))
-	if calculatedHash != videoChunk.ChunkHash {
-		err := fmt.Errorf("chunk hash mismatch: expected %s, got %s", videoChunk.ChunkHash, calculatedHash)
-		log.Println(err)
-		return err
+	hashValue, err := utils.CalculateFileHash(request.ChunkData)
+	if err != nil {
+		logrus.Error(err.Error())
+		return utils.Error(http.StatusInternalServerError, "视频哈希计算失败")
 	}
 
-	// 从配置中获取临时路径
-	tmpDir := config.AppConfig.Storage.VideosChunk
-	saveDir := filepath.Join(tmpDir, videoChunk.UploadID)
-	if err := os.MkdirAll(saveDir, os.ModePerm); err != nil {
-		log.Printf("failed to create directory: %v", err)
-		return err
+	if hashValue != request.ChunkHash {
+		logrus.Debugf("chunk hash mismatch: expected %s, got %s", request.ChunkHash, hashValue)
+		return utils.Error(http.StatusBadRequest, "分片哈希不匹配")
 	}
 
 	// 创建切片文件路径(/tmp/{uploadID}/{uploadID}_{chunkID}.xxx)
-	tempSavePath := filepath.Join(saveDir, fmt.Sprintf("%s_%d_tmp", videoChunk.UploadID, videoChunk.ChunkID))
-	log.Printf("save tempSaveFile at: %s", tempSavePath)
-	out, err := os.Create(tempSavePath)
-	if err != nil {
-		log.Printf("failed to save chunk: %v", err)
-		return err
-	}
-	defer out.Close()
+	tmpDir := config.AppConfig.Storage.VideosChunk
+	saveDir := filepath.Join(tmpDir, string(request.UploadID))
+	tempSavePath := filepath.Join(saveDir, fmt.Sprintf("%s_%d_tmp", request.UploadID, request.ChunkID))
 
-	// 重置文件指针
-	if _, err := file.Seek(0, io.SeekStart); err != nil {
-		log.Printf("failed to seek file: %v", err)
-		return err
+	if err := utils.SaveFile(request.ChunkData, tempSavePath); err != nil {
+		logrus.Error(err.Error())
+		return utils.Error(http.StatusInternalServerError, "切片文件保存失败")
 	}
 
-	// 调用DAO层写入视频切片
-	if err := vus.videoRepo.Save(file, tempSavePath); err != nil {
-		return fmt.Errorf("failed to save chunk: %v", err)
-	}
-
-	log.Printf("Chunk saved successfully: %s", tempSavePath) // 日志
-	return nil
+	logrus.Debug("Video chunk Upload successfully")
+	return utils.Success(http.StatusOK)
 }
 
 // HandleVideoComplete 处理组合完整视频逻辑
-func (vus *VideoUpload) HandleVideoComplete(video model.Video, chunkEndID int, coverFile multipart.File, videoHash string) error {
-	uploadIDStr := strconv.FormatInt(video.UploadID, 10)
-
+func (vus *VideoUpload) HandleVideoComplete(request *video.CompleteUploadRequest) *utils.Response {
 	// 调用DAO层获取视频切片列表（[]string）
-	chunks, err := vus.videoRepo.GetVideoChunksByUploadID(uploadIDStr, chunkEndID)
+	chunks, err := vus.videoRepo.GetVideoChunksByUploadID(request.UploadID, request.ChunkEndID)
 	if err != nil {
-		log.Printf("Error retrieving video chunks for upload ID %s: %v", uploadIDStr, err)
-		return err
+		logrus.Error(err.Error())
+		return utils.Error(http.StatusInternalServerError, "视频切片获取失败")
+	}
+
+	// 计算合并后视频的 SHA-256 哈希
+	hashValue, err := utils.CalculateFileHash(chunks)
+	if err != nil {
+		logrus.Error(err.Error())
+		return utils.Error(http.StatusInternalServerError, "视频哈希计算失败")
+	}
+
+	// 校验哈希
+	if hashValue != request.VideoHash {
+		logrus.Debugf("hash mismatch: expected %s, got %s", request.VideoHash, hashValue)
+		return utils.Error(http.StatusBadRequest, "哈希校验错误")
+	}
+
+	// 创建封面文件路径 (/cover/{uploadID}.png)
+	coverPath := filepath.Join(config.AppConfig.Storage.VideosCover, fmt.Sprintf("%s.png", request.UploadID))
+	if err := utils.SaveFile(request.Cover, coverPath); err != nil {
+		logrus.Error(err.Error())
+		return utils.Error(http.StatusInternalServerError, "封面文件保存失败")
 	}
 
 	// 合并切片文件到输出视频文件
-	videoPath := filepath.Join(config.AppConfig.Storage.VideosData, fmt.Sprintf("%d.mp4", video.UploadID))
-	if err := vus.videoRepo.SaveChunks(chunks, videoPath); err != nil {
-		log.Printf("Error saving chunks to output video file %s: %v", videoPath, err)
-		return err
+	videoPath := filepath.Join(config.AppConfig.Storage.VideosData, fmt.Sprintf("%s.mp4", request.UploadID))
+	if err := utils.MergeFiles(chunks, videoPath); err != nil {
+		logrus.Error(err.Error())
+		return utils.Error(http.StatusInternalServerError, "视频切片合并失败")
 	}
 
-	// 保存完整视频路径
-	video.VideoPath = videoPath
-
-	// 计算合并后视频的 SHA-256 哈希
-	file, err := os.Open(videoPath)
-	if err != nil {
-		log.Printf("Error opening  video file %s: %v", videoPath, err)
-		return err
+	newVideo := model.Video{
+		UploadID:    request.UploadID,
+		Title:       request.Title,
+		Description: request.Description,
+		CoverPath:   coverPath,
+		VideoPath:   videoPath,
+		UploaderID:  request.UploaderID,
 	}
-	// defer file.Close()
-	// 使用defer后面删除切片会无法关闭
-
-	hash := sha256.New()
-	if _, err := io.Copy(hash, file); err != nil {
-		log.Printf("Error copying  video file %s: %v", videoPath, err)
-		return err
-	}
-
-	file.Close()
-
-	hashValue := hex.EncodeToString(hash.Sum(nil))
-
-	// 校验哈希
-	if hashValue != videoHash {
-		file.Close()
-		// 若哈希校验错误，删除合并后的视频文件
-		if err := os.Remove(videoPath); err != nil {
-			log.Printf("Error deleting video file %s: %v", videoPath, err)
-			return err
-		}
-		log.Printf("hash mismatch: expected %s, got %s", videoHash, hashValue)
-		log.Printf("Video file %s successfully deleted after hash verification", videoPath)
-		return err
-	}
-	log.Printf("Hash verification succeeded for video %s", videoPath)
-
-	// 创建封面文件路径 (/cover/{uploadID}.png)
-	coverPath := filepath.Join(config.AppConfig.Storage.VideosCover, fmt.Sprintf("%s.png", uploadIDStr))
-	coverOutFile, err := os.Create(coverPath)
-	if err != nil {
-		log.Printf("Error creating cover file at %s: %v", coverPath, err)
-		return err
-	}
-	defer coverOutFile.Close()
-
-	// 调用DAO层写入视频封面文件
-	if err := vus.videoRepo.Save(coverFile, coverPath); err != nil {
-		return fmt.Errorf("failed to save cover file: %v", err)
-	}
-
-	// 更新视频结构体中的封面路径
-	video.CoverPath = coverPath
 
 	// 保存完整视频路径和封面路径
-	if err := vus.videoRepo.SaveCompleteVideo(video); err != nil {
-		log.Printf("Error saving complete video metadata for upload ID %s: %v", uploadIDStr, err)
-		return err
+	if err := vus.videoRepo.CreateVideo(&newVideo); err != nil {
+		logrus.Error(err.Error())
+		return utils.Error(http.StatusInternalServerError, "视频信息保存失败")
 	}
 
 	// 调用DAO层删除所有切片文件
-	vus.videoRepo.DeleteChunks(int(video.UploadID))
-	log.Printf("Chunk files for upload ID %s successfully deleted", uploadIDStr)
+	chunkDir := filepath.Join(config.AppConfig.Storage.VideosChunk, request.UploadID)
+	if err := utils.RemoveDir(chunkDir); err != nil {
+		logrus.Error(err.Error())
+		return utils.Error(http.StatusInternalServerError, "切片文件删除失败")
+	}
 
-	log.Printf("Video upload %s successfully completed and saved at %s with cover at %s", uploadIDStr, videoPath, coverPath)
-	return nil
+	logrus.Debugf("Video upload %s successfully completed and saved at %s with cover at %s", request.UploadID, videoPath, coverPath)
+	return utils.Success(http.StatusOK)
 }

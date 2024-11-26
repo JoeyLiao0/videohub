@@ -45,10 +45,9 @@ func Error(statusCode int, errorMsg string) *Response {
 	return &Response{StatusCode: statusCode, ErrorMsg: errorMsg, Status: false}
 }
 
-
 type Payload struct {
-	ID   uint64 `json:"id"`
-	Role uint8  `json:"role"`
+	ID   uint `json:"id"`
+	Role int8 `json:"role"`
 }
 
 type MyCustomClaims struct {
@@ -229,4 +228,87 @@ func SaveFile(file *multipart.FileHeader, dst string) error {
 		return errors.New("拷贝文件失败")
 	}
 	return nil
+}
+
+// MergeFiles 合并多个分片文件
+func MergeFiles(filePaths []string, dst string) error {
+	if err := os.MkdirAll(filepath.Dir(dst), 0750); err != nil {
+		return errors.New("创建文件夹失败")
+	}
+
+	out, err := os.Create(dst)
+	if err != nil {
+		return errors.New("创建文件失败")
+	}
+	defer out.Close()
+
+	for _, filePath := range filePaths {
+		src, err := os.Open(filePath)
+		if err != nil {
+			return errors.New("打开分片文件失败")
+		}
+		defer src.Close()
+
+		_, err = io.Copy(out, src)
+		if err != nil {
+			return errors.New("合并分片文件失败")
+		}
+	}
+	return nil
+}
+
+// RemoveDir 删除指定目录下的所有文件和子目录
+func RemoveDir(dirPath string) error {
+	// 检查目录是否存在
+	if _, err := os.Stat(dirPath); os.IsNotExist(err) {
+		return errors.New("目录不存在: " + dirPath)
+	}
+
+	// 删除目录下的所有文件和子目录
+	err := os.RemoveAll(dirPath)
+	if err != nil {
+		return errors.New("删除目录内容失败: " + err.Error())
+	}
+	return nil
+}
+
+// CalculateFileHash
+func CalculateFileHash(input interface{}) (string, error) {
+	hasher := sha256.New()
+
+	switch v := input.(type) {
+	case *multipart.FileHeader:
+		// 处理 *multipart.FileHeader 类型
+		file, err := v.Open()
+		if err != nil {
+			return "", fmt.Errorf("failed to open file: %v", err)
+		}
+		defer file.Close()
+
+		if _, err := io.Copy(hasher, file); err != nil {
+			return "", fmt.Errorf("failed to calculate hash: %v", err)
+		}
+
+	case []string:
+		// 处理 []string 类型
+		for _, filePath := range v {
+			file, err := os.Open(filePath)
+			if err != nil {
+				return "", fmt.Errorf("failed to open file %s: %v", filePath, err)
+			}
+			defer file.Close()
+
+			if _, err := io.Copy(hasher, file); err != nil {
+				return "", fmt.Errorf("failed to calculate hash for file %s: %v", filePath, err)
+			}
+		}
+
+	default:
+		return "", fmt.Errorf("unsupported input type")
+	}
+
+	hash := hasher.Sum(nil)
+	hashString := hex.EncodeToString(hash)
+
+	return hashString, nil
 }

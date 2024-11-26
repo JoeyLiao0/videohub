@@ -24,10 +24,10 @@ func NewVideo(db *gorm.DB) *Video {
 }
 
 // DeleteChunks 将多个切片文件删除
-func (v *Video) DeleteChunks(UploadID int) error {
-	saveDir := fmt.Sprintf("/tmp/%d", UploadID)
+func (v *Video) DeleteChunks(UploadID string) error {
+	saveDir := fmt.Sprintf("/tmp/%s", UploadID)
 	if err := os.RemoveAll(saveDir); err != nil {
-		log.Printf("Error deleting chunk files for upload ID %d: %v", UploadID, err)
+		log.Printf("Error deleting chunk files for upload ID %s: %v", UploadID, err)
 		return err
 	}
 	return nil
@@ -107,10 +107,9 @@ func (repo *Video) GetVideoChunksByUploadID(uploadID string, chunkEndID int) ([]
 	return chunks, nil
 }
 
-// SaveCompleteVideo 保存完整视频到数据库
-func (vr *Video) SaveCompleteVideo(video model.Video) error {
-	// GORM创建新纪录
-	return vr.DB.Create(&video).Error
+// CreateVideo 保存完整视频到数据库
+func (vr *Video) CreateVideo(value *model.Video) error {
+	return vr.DB.Model(&model.Video{}).Create(value).Error
 }
 
 // UpdateVideoStatus 更新视频状态

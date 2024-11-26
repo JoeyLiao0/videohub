@@ -27,7 +27,7 @@ func NewUser(ur *repository.User, cr *repository.Collection, vr *repository.Vide
 	return &(User{userRepo: ur, collectionRepo: cr, videoRepo: vr})
 }
 
-func (us *User) Login(request user.LoginRequest) *utils.Response {
+func (us *User) Login(request *user.LoginRequest) *utils.Response {
 	var result model.User
 	if err := us.userRepo.Search(map[string]interface{}{"email": request.Email}, 1, &result); err != nil {
 		logrus.Debug(err.Error())
@@ -58,7 +58,7 @@ func (us *User) Login(request user.LoginRequest) *utils.Response {
 	})
 }
 
-func (us *User) AccessToken(request user.AccessTokenRequest) *utils.Response {
+func (us *User) AccessToken(request *user.AccessTokenRequest) *utils.Response {
 	payload, err := utils.ParseJWT(request.RefreshToken, config.AppConfig.JWT.RefreshTokenSecret)
 	if err != nil {
 		if errors.Is(err, jwt.ErrTokenExpired) {
@@ -86,7 +86,7 @@ func (us *User) AccessToken(request user.AccessTokenRequest) *utils.Response {
 }
 
 // GetUserByID 根据用户 ID 获取单个用户信息
-func (us *User) GetUserByID(id uint64) *utils.Response {
+func (us *User) GetUserByID(id uint) *utils.Response {
 	var response user.GetUserResponse
 	if err := us.userRepo.Search(map[string]interface{}{"id": id}, 1, &response); err != nil {
 		logrus.Debug(err.Error())
@@ -98,7 +98,7 @@ func (us *User) GetUserByID(id uint64) *utils.Response {
 }
 
 // CreateUser 创建新用户
-func (us *User) CreateUser(request user.CreateUserRequest) *utils.Response {
+func (us *User) CreateUser(request *user.CreateUserRequest) *utils.Response {
 	if count, err := us.userRepo.Count(map[string]interface{}{"username": request.Username}); err != nil || count != 0 {
 		logrus.Debug("username exists")
 		return utils.Error(http.StatusBadRequest, "该用户名已存在")
@@ -118,7 +118,6 @@ func (us *User) CreateUser(request user.CreateUserRequest) *utils.Response {
 	newUser.Username = request.Username
 	newUser.Salt = utils.GenerateSalt(16)
 	newUser.Password = utils.HashPassword(request.Password, newUser.Salt)
-	newUser.CreatedAt = time.Now().UnixMilli()
 	newUser.Avatar = request.Avatar
 	newUser.Email = request.Email
 
@@ -132,7 +131,7 @@ func (us *User) CreateUser(request user.CreateUserRequest) *utils.Response {
 }
 
 // UpdateUser 更新用户信息
-func (us *User) UpdateUser(id uint64, fileds interface{}, request *user.UpdateUserRequest) *utils.Response {
+func (us *User) UpdateUser(id uint, fileds interface{}, request *user.UpdateUserRequest) *utils.Response {
 	if request.Email != "" {
 		if count, err := us.userRepo.Count(map[string]interface{}{"email": request.Email}); err != nil || count != 0 {
 			logrus.Debug("email exists")
@@ -167,7 +166,7 @@ func (us *User) UpdateUser(id uint64, fileds interface{}, request *user.UpdateUs
 }
 
 // DeleteUser 根据用户 ID 删除用户
-func (us *User) DeleteUser(id uint64) *utils.Response {
+func (us *User) DeleteUser(id uint) *utils.Response {
 	if err := us.userRepo.Delete(map[string]interface{}{"id": id}); err != nil {
 		logrus.Error(err.Error())
 		return utils.Error(http.StatusInternalServerError, "删除用户失败")
@@ -178,7 +177,7 @@ func (us *User) DeleteUser(id uint64) *utils.Response {
 }
 
 // UpdateUserPassword 更新用户密码
-func (us *User) UpdateUserPassword(id uint64, request user.UpdatePasswordRequest) *utils.Response {
+func (us *User) UpdateUserPassword(id uint, request *user.UpdatePasswordRequest) *utils.Response {
 	var result struct {
 		Email    string
 		Salt     string
@@ -211,7 +210,7 @@ func (us *User) UpdateUserPassword(id uint64, request user.UpdatePasswordRequest
 	return utils.Success(http.StatusOK)
 }
 
-func (us *User) SendEmailVerification(request user.SendEmailVerificationRequest) *utils.Response {
+func (us *User) SendEmailVerification(request *user.SendEmailVerificationRequest) *utils.Response {
 	code := utils.GenerateCode(6)
 	global.Rdb.Set(global.Ctx, request.Email, code, time.Minute*time.Duration(config.AppConfig.Email.Expiration))
 	if err := utils.SendEmailVerification(request.Email, code); err != nil {

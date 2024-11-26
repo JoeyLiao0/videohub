@@ -21,12 +21,12 @@ func NewUserController(uas *service.UserAvatar, uls *service.UserList, us *servi
 	return &(UserController{userAvatarService: uas, userListService: uls, userService: us})
 }
 
-func GetUserID(c *gin.Context) (uint64, error) {
+func GetUserID(c *gin.Context) (uint, error) {
 	idValue, exists := c.Get("id")
 	if !exists {
 		return 0, errors.New("上下文中不存在用户 ID")
 	}
-	id, ok := idValue.(uint64)
+	id, ok := idValue.(uint)
 	if !ok {
 		return 0, errors.New("用户 ID 类型错误")
 	}
@@ -40,7 +40,7 @@ func (uc *UserController) Login(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "请求的JSON格式无效或缺少必需字段"})
 		return
 	}
-	response := uc.userService.Login(request)
+	response := uc.userService.Login(&request)
 	c.JSON(response.StatusCode, response)
 }
 
@@ -51,7 +51,7 @@ func (uc *UserController) AccessToken(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "请求的JSON格式无效或缺少必需字段"})
 		return
 	}
-	response := uc.userService.AccessToken(request)
+	response := uc.userService.AccessToken(&request)
 	c.JSON(response.StatusCode, response)
 }
 
@@ -81,7 +81,7 @@ func (uc *UserController) CreateUser(c *gin.Context) {
 		return
 	}
 
-	response := uc.userService.CreateUser(request)
+	response := uc.userService.CreateUser(&request)
 	c.JSON(response.StatusCode, response)
 }
 
@@ -165,7 +165,7 @@ func (uc *UserController) UpdatePassword(c *gin.Context) {
 		return
 	}
 
-	response := uc.userService.UpdateUserPassword(id, request)
+	response := uc.userService.UpdateUserPassword(id, &request)
 	c.JSON(response.StatusCode, response)
 }
 
@@ -184,7 +184,7 @@ func (uc *UserController) SendEmailVerification(c *gin.Context) {
 		return
 	}
 
-	response := uc.userService.SendEmailVerification(request)
+	response := uc.userService.SendEmailVerification(&request)
 	c.JSON(response.StatusCode, response)
 }
 

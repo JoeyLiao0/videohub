@@ -122,6 +122,7 @@ func InitRouter() *gin.Engine {
 		{
 			// 视频点赞
 			videoRouter.POST("/:vid", videoController.LikeVideo)
+			// 更新视频状态
 			videoRouter.PUT("/videos/:id", videoController.UpdateVideoStatus)
 			// 新增视频评论
 			videoRouter.POST("/:vid/comments", videoController.AddComment)

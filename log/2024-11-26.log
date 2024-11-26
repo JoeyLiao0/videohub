@@ -25,3 +25,12 @@
 [info] 2024/11/26 - 22:39:38 "Server exiting"
 
 
+[info] 2024/11/26 - 23:00:04 "Logger initialized successfully"
+[info] 2024/11/26 - 23:00:04 "Config loaded successfully"
+[info] 2024/11/26 - 23:00:05 "Database connected successfully"
+[info] 2024/11/26 - 23:00:05 "Redis connected successfully"
+[info] 2024/11/26 - 23:00:05 "router initialized successfully"
+[info] 2024/11/26 - 23:00:48 "Shutdown Server ..."
+[info] 2024/11/26 - 23:00:48 "Server exiting"
+
+

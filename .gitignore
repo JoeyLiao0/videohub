@@ -32,3 +32,4 @@ test.go
 
 storage/
 logs/
+chunks/
