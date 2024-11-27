@@ -2,7 +2,6 @@ package config
 
 import (
 	"os"
-	"videohub/logger"
 
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
@@ -18,7 +17,10 @@ type Config struct {
 	JWT     jwtConfig     `yaml:"jwt"`
 	CORS    corsConfig    `yaml:"cors"`
 	Email   emailConfig   `yaml:"email"`
+	Log     logConfig     `yaml:"log"`
+	Video   videoConfig   `yaml:"video"`
 }
+
 type runConfig struct {
 	Name  string `yaml:"name"`
 	Host  string `yaml:"host"`
@@ -72,8 +74,22 @@ type emailConfig struct {
 	Expiration int    `yaml:"expiration"`
 }
 
+type logConfig struct {
+	Path       string `yaml:"path"`
+	MaxSize    int    `yaml:"max_size"`
+	MaxBackups int    `yaml:"max_backups"`
+	MaxAge     int    `yaml:"max_age"`
+	Compress   bool   `yaml:"compress"`
+}
+
+type videoConfig struct {
+	DefaultStatus int `yaml:"default_status"`
+	DefaultPage   int `yaml:"default_page"`
+	DefaultLimit  int `yaml:"default_limit"`
+}
+
 func InitConfig() {
-	dataBytes, err := os.ReadFile("./config/config.yaml")
+	dataBytes, err := os.ReadFile("config/config.yaml")
 	if err != nil {
 		logrus.Fatalf("Error reading config file: %v", err)
 	}
@@ -84,9 +100,5 @@ func InitConfig() {
 	}
 
 	AppConfig = &config
-	logger.InitLogger(AppConfig.Run.Debug)
-	
 	logrus.Info("Config loaded successfully")
-	initDB()
-	initRedis()
 }

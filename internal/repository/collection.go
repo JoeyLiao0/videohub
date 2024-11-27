@@ -7,12 +7,12 @@ import (
 )
 
 type Collection struct {
-	dB *gorm.DB
+	DB *gorm.DB
 }
 
 // 工厂函数，存储单例的数据库操作对象
 func NewCollection(db *gorm.DB) *Collection {
-	return &Collection{dB: db}
+	return &Collection{DB: db}
 }
 
 /*

@@ -312,3 +312,24 @@ func CalculateFileHash(input interface{}) (string, error) {
 
 	return hashString, nil
 }
+
+// ListFilesSortedByName 列出指定目录下按名称排序的文件名
+func ListFilesSortedByName(dirPath string, count int) ([]string, error) {
+	files, err := os.ReadDir(dirPath)
+	if err != nil {
+		return nil, err
+	}
+
+	var fileNames []string
+	for _, file := range files {
+		if !file.IsDir() {
+			fileNames = append(fileNames, filepath.Join(dirPath, file.Name()))
+		}
+	}
+
+	// 检查是否有缺失切片
+	if len(fileNames) < count {
+		return nil, errors.New("chunks are missing")
+	}
+	return fileNames, nil
+}

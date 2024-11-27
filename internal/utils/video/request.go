@@ -2,6 +2,23 @@ package video
 
 import "mime/multipart"
 
+type GetVideosRequest struct {
+	Status *int   `form:"status"`
+	Like   string `form:"like"`
+	Page   int    `form:"page"`
+	Limit  int    `form:"limit"`
+}
+
+type UpdateVideoStatusRequest struct {
+	NewStatus int8 `json:"new_status" binding:"required"`
+}
+
+type AddCommentRequest struct {
+	UserID          uint   `json:"user_id" binding:"required"`
+	CommentContent  string `json:"comment" binding:"required"`
+	FatherCommentID int   `json:"father_comment_id" binding:"required"`
+}
+
 type UploadChunkRequest struct {
 	UploadID  string                `form:"upload_id" binding:"required"`
 	ChunkData *multipart.FileHeader `form:"chunk_data" binding:"required"`

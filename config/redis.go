@@ -7,7 +7,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func initRedis() {
+func InitRedis() {
 	rdb := redis.NewClient(&redis.Options{
 		Addr:     AppConfig.Redis.Host + ":" + AppConfig.Redis.Port,
 		Password: AppConfig.Redis.Password,

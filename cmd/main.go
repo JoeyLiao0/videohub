@@ -10,6 +10,7 @@ import (
 	"videohub/global"
 	"videohub/internal/router"
 	"videohub/internal/utils"
+	"videohub/logger"
 
 	"github.com/sirupsen/logrus"
 )
@@ -17,6 +18,9 @@ import (
 func main() {
 	global.Ctx = context.Background()
 	config.InitConfig()
+	logger.InitLogger(config.AppConfig.Run.Debug)
+	config.InitDB()
+	config.InitRedis()
 	utils.InitValidator()
 	r := router.InitRouter()
 	srv := &http.Server{
@@ -43,6 +47,5 @@ func main() {
 		logrus.Fatal("Server Shutdown:", err)
 	}
 	logrus.Info("Server exiting")
-	logrus.Info()
 	logrus.Info()
 }

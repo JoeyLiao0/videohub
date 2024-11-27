@@ -1,8 +1,10 @@
 package service
 
 import (
-	"videohub/internal/model"
+	"net/http"
 	"videohub/internal/repository"
+	"videohub/internal/utils"
+	"videohub/internal/utils/video"
 )
 
 // VideoService 提供视频业务逻辑
@@ -16,10 +18,16 @@ func NewVideoSearch(vr *repository.Video) *VideoSearch {
 }
 
 // 获取视频列表
-func (vs *VideoSearch) GetVideos(status *int, like *string, page, limit int) ([]model.Video, int64, error) {
-	// 计算分页偏移量
-	offset := (page - 1) * limit
-
+func (vs *VideoSearch) GetVideos(request *video.GetVideosRequest) *utils.Response {
 	// 调用数据层查询
-	return vs.videoRepo.FindVideos(status, like, offset, limit)
+	videos, count, err := vs.videoRepo.FindVideos(request.Like, *request.Status, request.Page, request.Limit)
+	if err != nil {
+		return utils.Error(http.StatusInternalServerError, "视频列表查询失败")
+	}
+	return utils.Ok(http.StatusOK, &video.GetVideosResponse{
+		Videos: videos,
+		Page:   request.Page,
+		Limit:  request.Limit,
+		Count:  count,
+	})
 }

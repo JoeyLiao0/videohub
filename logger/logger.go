@@ -2,6 +2,7 @@ package logger
 
 import (
 	"fmt"
+	"videohub/config"
 
 	"github.com/natefinch/lumberjack"
 	"github.com/sirupsen/logrus"
@@ -66,11 +67,11 @@ func (hook *fileHook) Fire(entry *logrus.Entry) error {
 		hook.currentDate = entry.Time.Format("2006-01-02")
 		// file, err := os.OpenFile("log/"+hook.currentDate+".log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 		myLogger := &lumberjack.Logger{
-			Filename:   "log/" + hook.currentDate + ".log",
-			MaxSize:    10,
-			MaxBackups: 3,
-			MaxAge:     28,
-			Compress:   true,
+			Filename:   fmt.Sprintf("%s/%s.log", config.AppConfig.Log.Path, hook.currentDate),
+			MaxSize:    config.AppConfig.Log.MaxSize,
+			MaxBackups: config.AppConfig.Log.MaxBackups,
+			MaxAge:     config.AppConfig.Log.MaxAge,
+			Compress:   config.AppConfig.Log.Compress,
 		}
 		hook.currentDate = entry.Time.Format("2006-01-02")
 		FileLogger.SetOutput(myLogger)
@@ -79,7 +80,6 @@ func (hook *fileHook) Fire(entry *logrus.Entry) error {
 }
 
 type myHook struct {
-	currentDate string
 }
 
 func (hook *myHook) Levels() []logrus.Level {

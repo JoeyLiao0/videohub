@@ -28,7 +28,7 @@ func InitRouter() *gin.Engine {
 	videoUploadService := service.NewVideoUpload(videoRepo)
 	VideoUpdateStatusService := service.NewVideoUpdateStatus(videoRepo)
 	videoSearchService := service.NewVideoSearch(videoRepo)
-	commentService := service.NewCommentService(commentRepo)
+	commentService := service.NewComment(commentRepo, videoRepo)
 
 	//3、service 到 controller
 	userController := controller.NewUserController(userAvatarService, userListService, userService)
@@ -123,7 +123,7 @@ func InitRouter() *gin.Engine {
 			// 视频点赞
 			videoRouter.POST("/:vid", videoController.LikeVideo)
 			// 更新视频状态
-			videoRouter.PUT("/videos/:id", videoController.UpdateVideoStatus)
+			videoRouter.PUT("/:vid", videoController.UpdateVideoStatus)
 			// 新增视频评论
 			videoRouter.POST("/:vid/comments", videoController.AddComment)
 			// 评论点赞

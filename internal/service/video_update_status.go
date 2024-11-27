@@ -1,9 +1,12 @@
 package service
 
 import (
-	"errors"
-	"log"
+	"net/http"
 	"videohub/internal/repository"
+	"videohub/internal/utils"
+	"videohub/internal/utils/video"
+
+	"github.com/sirupsen/logrus"
 )
 
 // VideoService 提供视频业务逻辑
@@ -17,17 +20,16 @@ func NewVideoUpdateStatus(vr *repository.Video) *VideoUpdateStatus {
 }
 
 // UpdateVideoStatus更新视频状态
-func (vus *VideoUpdateStatus) UpdateVideoStatus(id int64, newStatus int8) error {
+func (vus *VideoUpdateStatus) UpdateVideoStatus(id string, request *video.UpdateVideoStatusRequest) *utils.Response {
 	// 验证状态合法性
-	if newStatus < 0 || newStatus > 3 {
-		return errors.New("非法的视频状态")
-	}
-	if vus.videoRepo == nil {
-		log.Printf("videoRepo is nil")
-		return errors.New("videoRepo 未初始化")
+	if request.NewStatus < 0 || request.NewStatus > 3 {
+		return utils.Error(http.StatusBadRequest, "无效的视频状态")
 	}
 
-	log.Printf("VideoRepo is not nil, calling UpdateVideoStatus")
-	// 调用DAO更新状态
-	return vus.videoRepo.UpdateVideoStatus(id, newStatus)
+	if err := vus.videoRepo.UpdateVideoStatus(id, request.NewStatus); err != nil {
+		logrus.Error(err.Error())
+		return utils.Error(http.StatusInternalServerError, "更新视频状态失败")
+	}
+
+	return utils.Success(http.StatusOK)
 }

@@ -21,11 +21,6 @@ func NewVideoUpload(vr *repository.Video) *VideoUpload {
 	return &VideoUpload{videoRepo: vr}
 }
 
-/*
-*@author:李逸城
-*@create_at:2024/11/7
- */
-
 func (vus *VideoUpload) HandleVideoChunk(request *video.UploadChunkRequest) *utils.Response {
 	fileSize := request.ChunkData.Size
 
@@ -62,8 +57,15 @@ func (vus *VideoUpload) HandleVideoChunk(request *video.UploadChunkRequest) *uti
 
 // HandleVideoComplete 处理组合完整视频逻辑
 func (vus *VideoUpload) HandleVideoComplete(request *video.CompleteUploadRequest) *utils.Response {
+	// 检查文件的类型、大小
+	if err := utils.CheckFile(request.Cover, []string{".png", ".jpg"}, 8<<20); err != nil {
+		logrus.Debug(err.Error())
+		return utils.Error(http.StatusBadRequest, err.Error())
+	}
+
 	// 调用DAO层获取视频切片列表（[]string）
-	chunks, err := vus.videoRepo.GetVideoChunksByUploadID(request.UploadID, request.ChunkEndID)
+	dirPath := filepath.Join(config.AppConfig.Storage.VideosChunk, request.UploadID)
+	chunks, err := utils.ListFilesSortedByName(dirPath, request.ChunkEndID)
 	if err != nil {
 		logrus.Error(err.Error())
 		return utils.Error(http.StatusInternalServerError, "视频切片获取失败")
@@ -82,14 +84,16 @@ func (vus *VideoUpload) HandleVideoComplete(request *video.CompleteUploadRequest
 		return utils.Error(http.StatusBadRequest, "哈希校验错误")
 	}
 
-	// 创建封面文件路径 (/cover/{uploadID}.png)
-	coverPath := filepath.Join(config.AppConfig.Storage.VideosCover, fmt.Sprintf("%s.png", request.UploadID))
+	// 创建封面文件路径 (/cover/{uploadID}.ext)
+	coverExt := filepath.Ext(request.Cover.Filename)
+	coverPath := filepath.Join(config.AppConfig.Storage.VideosCover, fmt.Sprintf("%s%s", request.UploadID, coverExt))
 	if err := utils.SaveFile(request.Cover, coverPath); err != nil {
 		logrus.Error(err.Error())
 		return utils.Error(http.StatusInternalServerError, "封面文件保存失败")
 	}
 
 	// 合并切片文件到输出视频文件
+	// TODO: 分片上传的时候应该保留文件扩展名吧
 	videoPath := filepath.Join(config.AppConfig.Storage.VideosData, fmt.Sprintf("%s.mp4", request.UploadID))
 	if err := utils.MergeFiles(chunks, videoPath); err != nil {
 		logrus.Error(err.Error())
