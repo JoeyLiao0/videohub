@@ -1,8 +1,18 @@
 package service
 
 import (
-	"fmt"
+	"errors"
+	"net/http"
+	"time"
+	"videohub/config"
+	"videohub/global"
+	"videohub/internal/model"
 	"videohub/internal/repository"
+	"videohub/internal/utils"
+	"videohub/internal/utils/user"
+
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/sirupsen/logrus"
 )
 
 type User struct {
@@ -17,17 +27,197 @@ func NewUser(ur *repository.User, cr *repository.Collection, vr *repository.Vide
 	return &(User{userRepo: ur, collectionRepo: cr, videoRepo: vr})
 }
 
-/*
-*@author:廖嘉鹏
-*@create_at:2024/10/17
- */
-// 测试，这是一个样板
-func (us *User) Test() error {
-	fmt.Println("User_service.Test()调用正常")
-	us.userRepo.Test()
-	us.videoRepo.Test()
-	us.collectionRepo.Test()
-	return nil
+func (us *User) Login(request *user.LoginRequest) *utils.Response {
+	var result model.User
+	if err := us.userRepo.Search(map[string]interface{}{"email": request.Email}, 1, &result); err != nil {
+		logrus.Debug(err.Error())
+		return utils.Error(http.StatusUnauthorized, "邮箱未注册")
+	}
+
+	if result.Password != utils.HashPassword(request.Password, result.Salt) {
+		logrus.Debug("password error")
+		return utils.Error(http.StatusUnauthorized, "密码错误")
+	}
+
+	accessToken, err := utils.GenerateJWT(utils.Payload{ID: result.ID, Role: result.Role}, config.AppConfig.JWT.AccessTokenSecret, config.AppConfig.JWT.AccessTokenExpire)
+	if err != nil {
+		logrus.Error(err.Error())
+		return utils.Error(http.StatusInternalServerError, "生成访问令牌失败")
+	}
+
+	refreshToken, err := utils.GenerateJWT(utils.Payload{ID: result.ID, Role: result.Role}, config.AppConfig.JWT.RefreshTokenSecret, config.AppConfig.JWT.RefreshTokenExpire)
+	if err != nil {
+		logrus.Error(err.Error())
+		return utils.Error(http.StatusInternalServerError, "生成刷新令牌失败")
+	}
+
+	logrus.Debug("Login successfully")
+	return utils.Ok(http.StatusOK, user.LoginResponse{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+	})
 }
 
-//服务函数追加在下面
+func (us *User) AccessToken(request *user.AccessTokenRequest) *utils.Response {
+	payload, err := utils.ParseJWT(request.RefreshToken, config.AppConfig.JWT.RefreshTokenSecret)
+	if err != nil {
+		if errors.Is(err, jwt.ErrTokenExpired) {
+			logrus.Debug(err.Error())
+			return utils.Error(http.StatusUnauthorized, "刷新令牌已过期")
+		} else {
+			logrus.Error(err.Error())
+			return utils.Error(http.StatusInternalServerError, "解析刷新令牌失败")
+		}
+	}
+
+	if count, err := us.userRepo.Count(map[string]interface{}{"id": payload.ID}); err != nil || count == 0 {
+		logrus.Debug("user not found")
+		return utils.Error(http.StatusUnauthorized, "用户不存在")
+	}
+
+	accessToken, err := utils.GenerateJWT(payload, config.AppConfig.JWT.AccessTokenSecret, config.AppConfig.JWT.AccessTokenExpire)
+	if err != nil {
+		logrus.Debug(err.Error())
+		return utils.Error(http.StatusInternalServerError, "生成访问令牌失败")
+	}
+
+	logrus.Debug("Access token refreshed successfully")
+	return utils.Ok(http.StatusOK, user.AccessTokenResponse{AccessToken: accessToken})
+}
+
+// GetUserByID 根据用户 ID 获取单个用户信息
+func (us *User) GetUserByID(id uint) *utils.Response {
+	var response user.GetUserResponse
+	if err := us.userRepo.Search(map[string]interface{}{"id": id}, 1, &response); err != nil {
+		logrus.Debug(err.Error())
+		return utils.Error(http.StatusNotFound, err.Error())
+	}
+
+	logrus.Debug("User retrieved successfully")
+	return utils.Ok(http.StatusOK, response)
+}
+
+// CreateUser 创建新用户
+func (us *User) CreateUser(request *user.CreateUserRequest) *utils.Response {
+	if count, err := us.userRepo.Count(map[string]interface{}{"username": request.Username}); err != nil || count != 0 {
+		logrus.Debug("username exists")
+		return utils.Error(http.StatusBadRequest, "该用户名已存在")
+	}
+
+	if count, err := us.userRepo.Count(map[string]interface{}{"email": request.Email}); err != nil || count != 0 {
+		logrus.Debug("email exists")
+		return utils.Error(http.StatusBadRequest, "该邮箱已被注册")
+	}
+
+	if err := utils.VerifyEmailCode(request.Email, request.Code); err != nil {
+		logrus.Debug(err.Error())
+		return utils.Error(http.StatusBadRequest, err.Error())
+	}
+
+	var newUser model.User
+	newUser.Username = request.Username
+	newUser.Salt = utils.GenerateSalt(16)
+	newUser.Password = utils.HashPassword(request.Password, newUser.Salt)
+	newUser.Avatar = request.Avatar
+	newUser.Email = request.Email
+
+	if err := us.userRepo.Create(&newUser); err != nil {
+		logrus.Error(err.Error())
+		return utils.Error(http.StatusInternalServerError, "创建用户时发生错误")
+	}
+
+	logrus.Debugf("User %s created successfully", newUser.Username)
+	return utils.Success(http.StatusCreated)
+}
+
+// UpdateUser 更新用户信息
+func (us *User) UpdateUser(id uint, fileds interface{}, request *user.UpdateUserRequest) *utils.Response {
+	if request.Email != "" {
+		if count, err := us.userRepo.Count(map[string]interface{}{"email": request.Email}); err != nil || count != 0 {
+			logrus.Debug("email exists")
+			return utils.Error(http.StatusBadRequest, "该邮箱已被注册")
+		}
+
+		if request.Code == "" {
+			logrus.Debug("code is empty")
+			return utils.Error(http.StatusBadRequest, "验证码不能为空")
+		}
+
+		if err := utils.VerifyEmailCode(request.Email, request.Code); err != nil {
+			logrus.Debug(err.Error())
+			return utils.Error(http.StatusBadRequest, err.Error())
+		}
+	}
+
+	if request.Username != "" {
+		if count, err := us.userRepo.Count(map[string]interface{}{"username": request.Username}); err != nil || count != 0 {
+			logrus.Debug("username exists")
+			return utils.Error(http.StatusBadRequest, "该用户名已被注册")
+		}
+	}
+
+	if err := us.userRepo.Update(map[string]interface{}{"id": id}, fileds, request); err != nil {
+		logrus.Error(err.Error())
+		return utils.Error(http.StatusInternalServerError, "更新用户失败")
+	}
+
+	logrus.Debug("User updated successfully")
+	return utils.Success(http.StatusOK)
+}
+
+// DeleteUser 根据用户 ID 删除用户
+func (us *User) DeleteUser(id uint) *utils.Response {
+	if err := us.userRepo.Delete(map[string]interface{}{"id": id}); err != nil {
+		logrus.Error(err.Error())
+		return utils.Error(http.StatusInternalServerError, "删除用户失败")
+	}
+
+	logrus.Debug("User deleted successfully")
+	return utils.Success(http.StatusOK)
+}
+
+// UpdateUserPassword 更新用户密码
+func (us *User) UpdateUserPassword(id uint, request *user.UpdatePasswordRequest) *utils.Response {
+	var result struct {
+		Email    string
+		Salt     string
+		Password string
+	}
+	if err := us.userRepo.Search(map[string]interface{}{"id": id}, 1, &result); err != nil {
+		logrus.Error(err.Error())
+		return utils.Error(http.StatusUnauthorized, "用户不存在")
+	}
+
+	if utils.HashPassword(request.Password, result.Salt) != result.Password {
+		logrus.Debug("wrong password")
+		return utils.Error(http.StatusUnauthorized, "密码错误")
+	}
+
+	if err := utils.VerifyEmailCode(result.Email, request.Code); err != nil {
+		logrus.Debug(err.Error())
+		return utils.Error(http.StatusBadRequest, err.Error())
+	}
+
+	salt := utils.GenerateSalt(16)
+	password := utils.HashPassword(request.NewPassword, salt)
+
+	if err := us.userRepo.Update(map[string]interface{}{"id": id}, []string{"salt", "password"}, map[string]interface{}{"salt": salt, "password": password}); err != nil {
+		logrus.Error(err.Error())
+		return utils.Error(http.StatusInternalServerError, "内部错误")
+	}
+
+	logrus.Debug("Password updated successfully")
+	return utils.Success(http.StatusOK)
+}
+
+func (us *User) SendEmailVerification(request *user.SendEmailVerificationRequest) *utils.Response {
+	code := utils.GenerateCode(6)
+	global.Rdb.Set(global.Ctx, request.Email, code, time.Minute*time.Duration(config.AppConfig.Email.Expiration))
+	if err := utils.SendEmailVerification(request.Email, code); err != nil {
+		logrus.Error(err.Error())
+		return utils.Error(http.StatusInternalServerError, "发送验证码失败")
+	}
+
+	logrus.Debug("Email verification sent successfully")
+	return utils.Success(http.StatusOK)
+}

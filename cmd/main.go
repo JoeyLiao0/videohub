@@ -1,34 +1,51 @@
-/*
-*@auther:廖嘉鹏
-*项目的启动文件
- */
-
 package main
 
 import (
-	"videohub/internal/config"
+	"context"
+	"net/http"
+	"os"
+	"os/signal"
+	"time"
+	"videohub/config"
+	"videohub/global"
 	"videohub/internal/router"
+	"videohub/internal/utils"
+	"videohub/logger"
 
-	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
 )
 
 func main() {
-	config.Init()
-	config := config.GetConfig()
-
-	if config == nil {
-		return
+	global.Ctx = context.Background()
+	config.InitConfig()
+	logger.InitLogger(config.AppConfig.Run.Debug)
+	config.InitDB()
+	config.InitRedis()
+	utils.InitValidator()
+	r := router.InitRouter()
+	srv := &http.Server{
+		Addr:    config.AppConfig.Run.Host + ":" + config.AppConfig.Run.Port,
+		Handler: r,
 	}
 
-	r := gin.Default()
+	go func() {
+		// 服务连接
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logrus.Fatalf("listen: %s\n", err)
+		}
+	}()
 
-	//路由初始化，其中包含工厂方法
-	router.RouterInit(r, config)
+	// 等待中断信号以优雅地关闭服务器（设置 5 秒的超时时间）
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt)
+	<-quit
+	logrus.Info("Shutdown Server ...")
 
-	// 设置静态文件夹路径
-	r.Static("/storage/images", config.Storage.Images)             // 图像存储
-	r.Static("/storage/videos", config.Storage.Videos_data)        // 视频存储
-	r.Static("/storage/videos_cover", config.Storage.Videos_cover) //视频封面存储
-
-	r.Run(config.Run.IP + ":" + config.Run.Port)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(ctx); err != nil {
+		logrus.Fatal("Server Shutdown:", err)
+	}
+	logrus.Info("Server exiting")
+	logrus.Info()
 }
