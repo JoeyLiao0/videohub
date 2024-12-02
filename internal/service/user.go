@@ -42,13 +42,13 @@ func (us *User) Login(request *user.LoginRequest) *utils.Response {
 	accessToken, err := utils.GenerateJWT(utils.Payload{ID: result.ID, Role: result.Role}, config.AppConfig.JWT.AccessTokenSecret, config.AppConfig.JWT.AccessTokenExpire)
 	if err != nil {
 		logrus.Error(err.Error())
-		return utils.Error(http.StatusInternalServerError, "生成访问令牌失败")
+		return utils.Error(http.StatusInternalServerError, "服务器内部错误")
 	}
 
 	refreshToken, err := utils.GenerateJWT(utils.Payload{ID: result.ID, Role: result.Role}, config.AppConfig.JWT.RefreshTokenSecret, config.AppConfig.JWT.RefreshTokenExpire)
 	if err != nil {
 		logrus.Error(err.Error())
-		return utils.Error(http.StatusInternalServerError, "生成刷新令牌失败")
+		return utils.Error(http.StatusInternalServerError, "服务器内部错误")
 	}
 
 	logrus.Debug("Login successfully")
@@ -63,22 +63,22 @@ func (us *User) AccessToken(request *user.AccessTokenRequest) *utils.Response {
 	if err != nil {
 		if errors.Is(err, jwt.ErrTokenExpired) {
 			logrus.Debug(err.Error())
-			return utils.Error(http.StatusUnauthorized, "刷新令牌已过期")
+			return utils.Error(http.StatusUnauthorized, "令牌已过期")
 		} else {
 			logrus.Error(err.Error())
-			return utils.Error(http.StatusInternalServerError, "解析刷新令牌失败")
+			return utils.Error(http.StatusInternalServerError, "服务器内部错误")
 		}
 	}
 
 	if count, err := us.userRepo.Count(map[string]interface{}{"id": payload.ID}); err != nil || count == 0 {
 		logrus.Debug("user not found")
-		return utils.Error(http.StatusUnauthorized, "用户不存在")
+		return utils.Error(http.StatusUnauthorized, "未授权")
 	}
 
 	accessToken, err := utils.GenerateJWT(payload, config.AppConfig.JWT.AccessTokenSecret, config.AppConfig.JWT.AccessTokenExpire)
 	if err != nil {
 		logrus.Debug(err.Error())
-		return utils.Error(http.StatusInternalServerError, "生成访问令牌失败")
+		return utils.Error(http.StatusInternalServerError, "服务器内部错误")
 	}
 
 	logrus.Debug("Access token refreshed successfully")
@@ -88,7 +88,7 @@ func (us *User) AccessToken(request *user.AccessTokenRequest) *utils.Response {
 // GetUserByID 根据用户 ID 获取单个用户信息
 func (us *User) GetUserByID(id uint) *utils.Response {
 	var response user.GetUserResponse
-	if err := us.userRepo.Search(map[string]interface{}{"id": id}, 1, &response); err != nil {
+	if err := us.userRepo.Search(map[string]interface{}{"id": id}, 1, &response.User); err != nil {
 		logrus.Debug(err.Error())
 		return utils.Error(http.StatusNotFound, err.Error())
 	}
@@ -101,29 +101,28 @@ func (us *User) GetUserByID(id uint) *utils.Response {
 func (us *User) CreateUser(request *user.CreateUserRequest) *utils.Response {
 	if count, err := us.userRepo.Count(map[string]interface{}{"username": request.Username}); err != nil || count != 0 {
 		logrus.Debug("username exists")
-		return utils.Error(http.StatusBadRequest, "该用户名已存在")
+		return utils.Error(http.StatusBadRequest, "用户名已存在")
 	}
 
 	if count, err := us.userRepo.Count(map[string]interface{}{"email": request.Email}); err != nil || count != 0 {
 		logrus.Debug("email exists")
-		return utils.Error(http.StatusBadRequest, "该邮箱已被注册")
+		return utils.Error(http.StatusBadRequest, "邮箱已被注册")
 	}
 
 	if err := utils.VerifyEmailCode(request.Email, request.Code); err != nil {
 		logrus.Debug(err.Error())
-		return utils.Error(http.StatusBadRequest, err.Error())
+		return utils.Error(http.StatusBadRequest, "验证码错误")
 	}
 
 	var newUser model.User
 	newUser.Username = request.Username
 	newUser.Salt = utils.GenerateSalt(16)
 	newUser.Password = utils.HashPassword(request.Password, newUser.Salt)
-	newUser.Avatar = request.Avatar
 	newUser.Email = request.Email
 
 	if err := us.userRepo.Create(&newUser); err != nil {
 		logrus.Error(err.Error())
-		return utils.Error(http.StatusInternalServerError, "创建用户时发生错误")
+		return utils.Error(http.StatusInternalServerError, "服务器内部错误")
 	}
 
 	logrus.Debugf("User %s created successfully", newUser.Username)
@@ -135,30 +134,30 @@ func (us *User) UpdateUser(id uint, fileds interface{}, request *user.UpdateUser
 	if request.Email != "" {
 		if count, err := us.userRepo.Count(map[string]interface{}{"email": request.Email}); err != nil || count != 0 {
 			logrus.Debug("email exists")
-			return utils.Error(http.StatusBadRequest, "该邮箱已被注册")
+			return utils.Error(http.StatusBadRequest, "邮箱已被注册")
 		}
 
 		if request.Code == "" {
 			logrus.Debug("code is empty")
-			return utils.Error(http.StatusBadRequest, "验证码不能为空")
+			return utils.Error(http.StatusBadRequest, "验证码为空")
 		}
 
 		if err := utils.VerifyEmailCode(request.Email, request.Code); err != nil {
 			logrus.Debug(err.Error())
-			return utils.Error(http.StatusBadRequest, err.Error())
+			return utils.Error(http.StatusBadRequest, "验证码错误")
 		}
 	}
 
 	if request.Username != "" {
 		if count, err := us.userRepo.Count(map[string]interface{}{"username": request.Username}); err != nil || count != 0 {
 			logrus.Debug("username exists")
-			return utils.Error(http.StatusBadRequest, "该用户名已被注册")
+			return utils.Error(http.StatusBadRequest, "用户名已被注册")
 		}
 	}
 
 	if err := us.userRepo.Update(map[string]interface{}{"id": id}, fileds, request); err != nil {
 		logrus.Error(err.Error())
-		return utils.Error(http.StatusInternalServerError, "更新用户失败")
+		return utils.Error(http.StatusInternalServerError, "服务器内部错误")
 	}
 
 	logrus.Debug("User updated successfully")
@@ -169,7 +168,7 @@ func (us *User) UpdateUser(id uint, fileds interface{}, request *user.UpdateUser
 func (us *User) DeleteUser(id uint) *utils.Response {
 	if err := us.userRepo.Delete(map[string]interface{}{"id": id}); err != nil {
 		logrus.Error(err.Error())
-		return utils.Error(http.StatusInternalServerError, "删除用户失败")
+		return utils.Error(http.StatusInternalServerError, "服务器内部错误")
 	}
 
 	logrus.Debug("User deleted successfully")
@@ -185,7 +184,7 @@ func (us *User) UpdateUserPassword(id uint, request *user.UpdatePasswordRequest)
 	}
 	if err := us.userRepo.Search(map[string]interface{}{"id": id}, 1, &result); err != nil {
 		logrus.Error(err.Error())
-		return utils.Error(http.StatusUnauthorized, "用户不存在")
+		return utils.Error(http.StatusUnauthorized, "未授权")
 	}
 
 	if utils.HashPassword(request.Password, result.Salt) != result.Password {
@@ -195,7 +194,7 @@ func (us *User) UpdateUserPassword(id uint, request *user.UpdatePasswordRequest)
 
 	if err := utils.VerifyEmailCode(result.Email, request.Code); err != nil {
 		logrus.Debug(err.Error())
-		return utils.Error(http.StatusBadRequest, err.Error())
+		return utils.Error(http.StatusBadRequest, "验证码错误")
 	}
 
 	salt := utils.GenerateSalt(16)
@@ -203,7 +202,7 @@ func (us *User) UpdateUserPassword(id uint, request *user.UpdatePasswordRequest)
 
 	if err := us.userRepo.Update(map[string]interface{}{"id": id}, []string{"salt", "password"}, map[string]interface{}{"salt": salt, "password": password}); err != nil {
 		logrus.Error(err.Error())
-		return utils.Error(http.StatusInternalServerError, "内部错误")
+		return utils.Error(http.StatusInternalServerError, "服务器内部错误")
 	}
 
 	logrus.Debug("Password updated successfully")
@@ -215,7 +214,7 @@ func (us *User) SendEmailVerification(request *user.SendEmailVerificationRequest
 	global.Rdb.Set(global.Ctx, request.Email, code, time.Minute*time.Duration(config.AppConfig.Email.Expiration))
 	if err := utils.SendEmailVerification(request.Email, code); err != nil {
 		logrus.Error(err.Error())
-		return utils.Error(http.StatusInternalServerError, "发送验证码失败")
+		return utils.Error(http.StatusInternalServerError, "服务器内部错误")
 	}
 
 	logrus.Debug("Email verification sent successfully")

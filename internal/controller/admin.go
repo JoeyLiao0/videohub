@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"net/http"
 	"videohub/internal/service"
+	"videohub/internal/utils"
 
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
 )
 
 // AdminController 包含用户相关的服务
@@ -24,11 +26,11 @@ func NewAdminController(uas *service.UserAvatar, uls *service.UserList, us *serv
 func (ac *AdminController) GetUser(c *gin.Context) {
 	id, err := GetUserID(c) // 从上下文中获取用户 ID
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()}) // 如果获取 ID 失败，返回 HTTP 400
+		logrus.Debug(err.Error())
+		c.JSON(http.StatusOK, utils.Error(http.StatusBadRequest, "请求无效"))
 		return
 	}
 	fmt.Println("Get videos for user", id)
-	// TODO
 	// TODO
 }
 

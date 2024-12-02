@@ -16,7 +16,6 @@ type CreateUserRequest struct {
 	Password string `json:"password" binding:"required"`
 	Email    string `json:"email" binding:"required" validate:"email"`
 	Code     string `json:"code" binding:"required"`
-	Avatar   string `json:"avatar"`
 }
 
 type UpdateUserRequest struct {

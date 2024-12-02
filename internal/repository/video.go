@@ -29,10 +29,7 @@ func (vr *Video) UpdateVideoStatus(id string, newStatus int8) error {
 }
 
 // 查询视频列表
-func (vr *Video) FindVideos(like string, status, page, limit int) ([]model.Video, int64, error) {
-	var videos []model.Video
-	var count int64
-
+func (vr *Video) FindVideos(like string, status, page, limit int, result interface{}) error {
 	query := vr.DB.Model(&model.Video{})
 	query = query.Where("video_status = ?", status)
 
@@ -44,10 +41,10 @@ func (vr *Video) FindVideos(like string, status, page, limit int) ([]model.Video
 	// 计算偏移量
 	offset := (page - 1) * limit
 	// 分页查询
-	err := query.Count(&count).Offset(offset).Limit(limit).Find(&videos).Error
+	err := query.Offset(offset).Limit(limit).Find(result).Error
 	if err != nil {
-		return nil, 0, err
+		return err
 	}
 
-	return videos, count, nil
+	return nil
 }

@@ -65,14 +65,14 @@ func InitRouter() *gin.Engine {
 			// 创建用户
 			adminRouter.POST("/users", adminController.CreateUser)
 			// 更新用户信息
-			adminRouter.PUT("/users/:id", adminController.UpdateUser)
+			adminRouter.PUT("/users", adminController.UpdateUser)
 
 			// 视频列表获取
 			adminRouter.GET("/videos", adminController.GetVideos)
 			// 视频状态修改
-			adminRouter.PUT("/videos/:vid", adminController.UpdateVideo)
+			adminRouter.PUT("/videos", adminController.UpdateVideo)
 			// 视频删除
-			adminRouter.DELETE("/videos/:vid", adminController.DeleteVideo)
+			adminRouter.DELETE("/videos", adminController.DeleteVideo)
 		}
 	}
 
@@ -101,7 +101,7 @@ func InitRouter() *gin.Engine {
 			// 用户发布视频列表获取
 			userRouter.GET("/videos", userController.GetVideos)
 			// 删除用户发布的视频
-			userRouter.DELETE("/videos/:vid", userController.DeleteVideo)
+			userRouter.DELETE("/videos", userController.DeleteVideo)
 			// 获取用户视频收藏列表
 			userRouter.GET("/collections", userController.GetCollections)
 			// 用户收藏视频
@@ -116,20 +116,22 @@ func InitRouter() *gin.Engine {
 		// 获取视频列表
 		videoRouter.GET("", videoController.GetVideos)
 		// 获取视频评论
-		videoRouter.GET("/:vid/comments", videoController.GetComments)
+		videoRouter.GET("/comments", videoController.GetComments)
 
 		videoRouter.Use(middleware.AuthMiddleware(0))
 		{
 			// 视频点赞
-			videoRouter.POST("/:vid", videoController.LikeVideo)
+			videoRouter.POST("", videoController.LikeVideo)
 			// 更新视频状态
-			videoRouter.PUT("/:vid", videoController.UpdateVideoStatus)
+			videoRouter.PUT("", videoController.UpdateVideoStatus)
 			// 新增视频评论
-			videoRouter.POST("/:vid/comments", videoController.AddComment)
-			// 评论点赞
-			videoRouter.POST("/:vid/comments/:cid", videoController.LikeComment)
+			videoRouter.POST("/comments", videoController.AddComment)
 			// 删除评论
-			videoRouter.DELETE("/:vid/comments/:cid", videoController.DeleteComment)
+			videoRouter.DELETE("/comments", videoController.DeleteComment)
+			// 评论点赞
+			videoRouter.POST("/comments/likes", videoController.LikeComment)
+			// 评论取消点赞
+			videoRouter.DELETE("/comments/likes", videoController.UnlikeComment)
 			// 视频分片上传
 			videoRouter.POST("/chunk", videoController.UploadChunk)
 			// 合并视频分片

@@ -33,7 +33,7 @@ func (vus *VideoUpload) HandleVideoChunk(request *video.UploadChunkRequest) *uti
 	hashValue, err := utils.CalculateFileHash(request.ChunkData)
 	if err != nil {
 		logrus.Error(err.Error())
-		return utils.Error(http.StatusInternalServerError, "视频哈希计算失败")
+		return utils.Error(http.StatusInternalServerError, "服务器内部错误")
 	}
 
 	if hashValue != request.ChunkHash {
@@ -48,7 +48,7 @@ func (vus *VideoUpload) HandleVideoChunk(request *video.UploadChunkRequest) *uti
 
 	if err := utils.SaveFile(request.ChunkData, tempSavePath); err != nil {
 		logrus.Error(err.Error())
-		return utils.Error(http.StatusInternalServerError, "切片文件保存失败")
+		return utils.Error(http.StatusInternalServerError, "服务器内部错误")
 	}
 
 	logrus.Debug("Video chunk Upload successfully")
@@ -60,7 +60,7 @@ func (vus *VideoUpload) HandleVideoComplete(request *video.CompleteUploadRequest
 	// 检查文件的类型、大小
 	if err := utils.CheckFile(request.Cover, []string{".png", ".jpg"}, 8<<20); err != nil {
 		logrus.Debug(err.Error())
-		return utils.Error(http.StatusBadRequest, err.Error())
+		return utils.Error(http.StatusBadRequest, "文件格式错误或文件过大")
 	}
 
 	// 调用DAO层获取视频切片列表（[]string）
@@ -68,14 +68,14 @@ func (vus *VideoUpload) HandleVideoComplete(request *video.CompleteUploadRequest
 	chunks, err := utils.ListFilesSortedByName(dirPath, request.ChunkEndID)
 	if err != nil {
 		logrus.Error(err.Error())
-		return utils.Error(http.StatusInternalServerError, "视频切片获取失败")
+		return utils.Error(http.StatusInternalServerError, "服务器内部错误")
 	}
 
 	// 计算合并后视频的 SHA-256 哈希
 	hashValue, err := utils.CalculateFileHash(chunks)
 	if err != nil {
 		logrus.Error(err.Error())
-		return utils.Error(http.StatusInternalServerError, "视频哈希计算失败")
+		return utils.Error(http.StatusInternalServerError, "服务器内部错误")
 	}
 
 	// 校验哈希
@@ -89,7 +89,7 @@ func (vus *VideoUpload) HandleVideoComplete(request *video.CompleteUploadRequest
 	coverPath := filepath.Join(config.AppConfig.Storage.VideosCover, fmt.Sprintf("%s%s", request.UploadID, coverExt))
 	if err := utils.SaveFile(request.Cover, coverPath); err != nil {
 		logrus.Error(err.Error())
-		return utils.Error(http.StatusInternalServerError, "封面文件保存失败")
+		return utils.Error(http.StatusInternalServerError, "服务器内部错误")
 	}
 
 	// 合并切片文件到输出视频文件
@@ -97,7 +97,7 @@ func (vus *VideoUpload) HandleVideoComplete(request *video.CompleteUploadRequest
 	videoPath := filepath.Join(config.AppConfig.Storage.VideosData, fmt.Sprintf("%s.mp4", request.UploadID))
 	if err := utils.MergeFiles(chunks, videoPath); err != nil {
 		logrus.Error(err.Error())
-		return utils.Error(http.StatusInternalServerError, "视频切片合并失败")
+		return utils.Error(http.StatusInternalServerError, "服务器内部错误")
 	}
 
 	newVideo := model.Video{
@@ -112,14 +112,14 @@ func (vus *VideoUpload) HandleVideoComplete(request *video.CompleteUploadRequest
 	// 保存完整视频路径和封面路径
 	if err := vus.videoRepo.CreateVideo(&newVideo); err != nil {
 		logrus.Error(err.Error())
-		return utils.Error(http.StatusInternalServerError, "视频信息保存失败")
+		return utils.Error(http.StatusInternalServerError, "服务器内部错误")
 	}
 
 	// 调用DAO层删除所有切片文件
 	chunkDir := filepath.Join(config.AppConfig.Storage.VideosChunk, request.UploadID)
 	if err := utils.RemoveDir(chunkDir); err != nil {
 		logrus.Error(err.Error())
-		return utils.Error(http.StatusInternalServerError, "切片文件删除失败")
+		return utils.Error(http.StatusInternalServerError, "服务器内部错误")
 	}
 
 	logrus.Debugf("Video upload %s successfully completed and saved at %s with cover at %s", request.UploadID, videoPath, coverPath)

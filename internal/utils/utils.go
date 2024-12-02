@@ -23,26 +23,21 @@ import (
 )
 
 type Response struct {
-	StatusCode int         `json:"-"`
+	StatusCode int         `json:"code"`
 	ErrorMsg   string      `json:"error,omitempty"`
 	Data       interface{} `json:"data,omitempty"`
-	Status     bool        `json:"status,omitempty"`
 }
 
 func Success(statusCode int) *Response {
-	return &Response{StatusCode: statusCode, Status: true}
-}
-
-func Fail(statusCode int) *Response {
-	return &Response{StatusCode: statusCode, Status: false}
+	return &Response{StatusCode: statusCode}
 }
 
 func Ok(statusCode int, data interface{}) *Response {
-	return &Response{StatusCode: statusCode, Data: data, Status: true}
+	return &Response{StatusCode: statusCode, Data: data}
 }
 
 func Error(statusCode int, errorMsg string) *Response {
-	return &Response{StatusCode: statusCode, ErrorMsg: errorMsg, Status: false}
+	return &Response{StatusCode: statusCode, ErrorMsg: errorMsg}
 }
 
 type Payload struct {
@@ -165,10 +160,10 @@ func SendEmailVerification(to string, code string) error {
 func VerifyEmailCode(email string, code string) error {
 	c, err := global.Rdb.Get(global.Ctx, email).Result()
 	if err != nil {
-		return errors.New("验证码已过期")
+		return err
 	}
 	if c != code {
-		return errors.New("验证码错误")
+		return errors.New("code is invalid")
 	}
 
 	global.Rdb.Del(global.Ctx, email)
@@ -193,7 +188,7 @@ func HashPassword(password string, salt string) string {
 
 func CheckFile(file *multipart.FileHeader, types []string, maxSize int64) error {
 	if file.Size > maxSize {
-		return errors.New("文件大小超过限制")
+		return errors.New("file size exceeds the limit")
 	}
 
 	fileExt := filepath.Ext(file.Filename)
@@ -203,29 +198,29 @@ func CheckFile(file *multipart.FileHeader, types []string, maxSize int64) error 
 		}
 	}
 
-	return errors.New("文件类型不支持")
+	return errors.New("file type is not supported")
 }
 
 func SaveFile(file *multipart.FileHeader, dst string) error {
 	src, err := file.Open()
 	if err != nil {
-		return errors.New("文件打开失败")
+		return err
 	}
 	defer src.Close()
 
 	if err = os.MkdirAll(filepath.Dir(dst), 0750); err != nil {
-		return errors.New("创建文件夹失败")
+		return err
 	}
 
 	out, err := os.Create(dst)
 	if err != nil {
-		return errors.New("创建文件失败")
+		return err
 	}
 	defer out.Close()
 
 	_, err = io.Copy(out, src)
 	if err != nil {
-		return errors.New("拷贝文件失败")
+		return err
 	}
 	return nil
 }
@@ -233,25 +228,25 @@ func SaveFile(file *multipart.FileHeader, dst string) error {
 // MergeFiles 合并多个分片文件
 func MergeFiles(filePaths []string, dst string) error {
 	if err := os.MkdirAll(filepath.Dir(dst), 0750); err != nil {
-		return errors.New("创建文件夹失败")
+		return err
 	}
 
 	out, err := os.Create(dst)
 	if err != nil {
-		return errors.New("创建文件失败")
+		return err
 	}
 	defer out.Close()
 
 	for _, filePath := range filePaths {
 		src, err := os.Open(filePath)
 		if err != nil {
-			return errors.New("打开分片文件失败")
+			return err
 		}
 		defer src.Close()
 
 		_, err = io.Copy(out, src)
 		if err != nil {
-			return errors.New("合并分片文件失败")
+			return err
 		}
 	}
 	return nil
@@ -261,13 +256,13 @@ func MergeFiles(filePaths []string, dst string) error {
 func RemoveDir(dirPath string) error {
 	// 检查目录是否存在
 	if _, err := os.Stat(dirPath); os.IsNotExist(err) {
-		return errors.New("目录不存在: " + dirPath)
+		return err
 	}
 
 	// 删除目录下的所有文件和子目录
 	err := os.RemoveAll(dirPath)
 	if err != nil {
-		return errors.New("删除目录内容失败: " + err.Error())
+		return err
 	}
 	return nil
 }
@@ -281,12 +276,12 @@ func CalculateFileHash(input interface{}) (string, error) {
 		// 处理 *multipart.FileHeader 类型
 		file, err := v.Open()
 		if err != nil {
-			return "", fmt.Errorf("failed to open file: %v", err)
+			return "", err
 		}
 		defer file.Close()
 
 		if _, err := io.Copy(hasher, file); err != nil {
-			return "", fmt.Errorf("failed to calculate hash: %v", err)
+			return "", err
 		}
 
 	case []string:
@@ -294,12 +289,12 @@ func CalculateFileHash(input interface{}) (string, error) {
 		for _, filePath := range v {
 			file, err := os.Open(filePath)
 			if err != nil {
-				return "", fmt.Errorf("failed to open file %s: %v", filePath, err)
+				return "", err
 			}
 			defer file.Close()
 
 			if _, err := io.Copy(hasher, file); err != nil {
-				return "", fmt.Errorf("failed to calculate hash for file %s: %v", filePath, err)
+				return "", err
 			}
 		}
 

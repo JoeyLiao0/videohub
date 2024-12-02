@@ -19,15 +19,12 @@ func NewVideoSearch(vr *repository.Video) *VideoSearch {
 
 // 获取视频列表
 func (vs *VideoSearch) GetVideos(request *video.GetVideosRequest) *utils.Response {
-	// 调用数据层查询
-	videos, count, err := vs.videoRepo.FindVideos(request.Like, *request.Status, request.Page, request.Limit)
-	if err != nil {
-		return utils.Error(http.StatusInternalServerError, "视频列表查询失败")
+	var response video.GetVideosResponse
+	if err := vs.videoRepo.FindVideos(request.Like, *request.Status, request.Page, request.Limit, &response.Videos); err != nil {
+		return utils.Error(http.StatusInternalServerError, "服务器内部错误")
 	}
-	return utils.Ok(http.StatusOK, &video.GetVideosResponse{
-		Videos: videos,
-		Page:   request.Page,
-		Limit:  request.Limit,
-		Count:  count,
-	})
+	response.Count = int64(len(response.Videos))
+	response.Page = request.Page
+	response.Limit = request.Limit
+	return utils.Ok(http.StatusOK, &response)
 }

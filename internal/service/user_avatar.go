@@ -26,7 +26,7 @@ func NewUserAvatar(ur *repository.User) *UserAvatar {
 func (uas *UserAvatar) UploadUserAvatar(id uint, request *user.UploadAvatarRequest) *utils.Response {
 	if err := utils.CheckFile(request.Avatar, []string{".png", ".jpg"}, 8<<20); err != nil {
 		logrus.Debug(err.Error())
-		return utils.Error(http.StatusBadRequest, err.Error())
+		return utils.Error(http.StatusBadRequest, "文件格式错误或文件过大")
 	}
 
 	fileExt := filepath.Ext(request.Avatar.Filename)
@@ -38,7 +38,7 @@ func (uas *UserAvatar) UploadUserAvatar(id uint, request *user.UploadAvatarReque
 
 	if err := uas.userRepo.Update(map[string]interface{}{"id": id}, "avatar", map[string]interface{}{"avatar": filePath}); err != nil {
 		logrus.Error(err.Error())
-		return utils.Error(http.StatusInternalServerError, "更新用户头像信息失败")
+		return utils.Error(http.StatusInternalServerError, "服务器内部错误")
 	}
 
 	logrus.Debug("Upload user avatar successfully")
