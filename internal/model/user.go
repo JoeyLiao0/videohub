@@ -9,6 +9,6 @@ type User struct {
 	Salt      string `gorm:"size:255;not null" json:"-"`
 	Avatar    string `gorm:"size:255" json:"avatar"`
 	Email     string `gorm:"size:255;unique" json:"email"`
-	Status    int8   `gorm:"type:tinyint(1);default:1" json:"status"`
+	Status    int8   `gorm:"type:tinyint(1);default:0" json:"status"` // 0-正常 1-封禁 2-注销
 	Role      int8   `gorm:"type:tinyint(1);default:0" json:"role"`
 }

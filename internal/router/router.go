@@ -49,8 +49,8 @@ func InitRouter() *gin.Engine {
 
 	// 设置静态文件夹路径
 	r.Static("/storage/images", config.AppConfig.Storage.Images)            // 图像存储
-	r.Static("/storage/videos", config.AppConfig.Storage.VideosData)        // 视频存储
-	r.Static("/storage/videos_cover", config.AppConfig.Storage.VideosCover) // 视频封面存储
+	r.Static("storage/videos/data", config.AppConfig.Storage.VideosData)    // 视频存储
+	r.Static("/storage/videos/cover", config.AppConfig.Storage.VideosCover) // 视频封面存储
 
 	adminRouter := r.Group("/admin")
 	{

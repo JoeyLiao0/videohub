@@ -328,3 +328,16 @@ func ListFilesSortedByName(dirPath string, count int) ([]string, error) {
 	}
 	return fileNames, nil
 }
+
+func GenerateUsername(n int) (string , error) {
+	letters := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	result := make([]byte, n)
+	for i := range result {
+		num, err := rand.Int(rand.Reader, big.NewInt(int64(len(letters))))
+		if err != nil {
+			return "", err
+		}
+		result[i] = letters[num.Int64()]
+	}
+	return string(result), nil
+}

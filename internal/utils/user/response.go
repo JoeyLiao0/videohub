@@ -1,9 +1,11 @@
 package user
 
 type UserInfo struct {
-	Username string `json:"username" binding:"required"`
-	Email    string `json:"email" binding:"required"`
-	Avatar   string `json:"avatar,omitempty"`
+	Username  string `json:"name" binding:"required"`
+	Email     string `json:"email" binding:"required"`
+	Avatar    string `json:"avatar" binding:"required"`
+	Status    int8   `json:"status" binding:"required"`
+	CreatedAt int64  `json:"time" binding:"required"`
 }
 
 type LoginResponse struct {
