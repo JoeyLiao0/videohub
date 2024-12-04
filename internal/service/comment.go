@@ -33,7 +33,7 @@ func (cs *Comment) GetComments(request *video.GetCommentsRequest) *utils.Respons
 // CreateComment创建评论s
 func (cs *Comment) CreateComment(request *video.AddCommentRequest) *utils.Response {
 	comment := &model.Comment{
-		UserID:         request.UserID,
+		Username:       request.Username,
 		VideoID:        request.VideoID,
 		CommentContent: request.CommentContent,
 		ParentID:       request.FatherCommentID,

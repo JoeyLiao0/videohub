@@ -29,6 +29,7 @@ type runConfig struct {
 }
 
 type storageConfig struct {
+	Base        string `yaml:"base"`
 	VideosData  string `yaml:"videos_data"`
 	VideosCover string `yaml:"videos_cover"`
 	VideosChunk string `yaml:"videos_chunk"`

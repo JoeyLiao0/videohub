@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"time"
 	"videohub/config"
@@ -37,6 +38,11 @@ func (us *User) Login(request *user.LoginRequest) *utils.Response {
 	if result.Password != utils.HashPassword(request.Password, result.Salt) {
 		logrus.Debug("password error")
 		return utils.Error(http.StatusBadRequest, "密码错误")
+	}
+
+	if result.Status == 2 {
+		logrus.Debug("user is banned")
+		return utils.Error(http.StatusUnauthorized, "用户已注销")
 	}
 
 	accessToken, err := utils.GenerateJWT(utils.Payload{ID: result.ID, Role: result.Role}, config.AppConfig.JWT.AccessTokenSecret, config.AppConfig.JWT.AccessTokenExpire)
@@ -102,14 +108,13 @@ func (us *User) CreateUser(request *user.CreateUserRequest) *utils.Response {
 	var username string
 	for {
 		username, _ = utils.GenerateUsername(12)
-		logrus.Debug(username)
 		if count, err := us.userRepo.Count(map[string]interface{}{"username": username}); err != nil || count != 0 {
 			logrus.Debug("username exists")
 		} else {
 			break
 		}
 	}
-	logrus.Debug(username)
+
 	if count, err := us.userRepo.Count(map[string]interface{}{"email": request.Email}); err != nil || count != 0 {
 		logrus.Debug("email exists")
 		return utils.Error(http.StatusBadRequest, "邮箱已被注册")
@@ -119,12 +124,13 @@ func (us *User) CreateUser(request *user.CreateUserRequest) *utils.Response {
 		logrus.Debug(err.Error())
 		return utils.Error(http.StatusBadRequest, "验证码错误")
 	}
-	
+
 	var newUser model.User
 	newUser.Username = username
 	newUser.Salt = utils.GenerateSalt(16)
 	newUser.Password = utils.HashPassword(request.Password, newUser.Salt)
 	newUser.Email = request.Email
+	newUser.Avatar = fmt.Sprintf("%s/%s/%s", config.AppConfig.Storage.Base, config.AppConfig.Storage.Images, "tourist.jpeg")
 
 	if err := us.userRepo.Create(&newUser); err != nil {
 		logrus.Error(err.Error())
@@ -172,7 +178,12 @@ func (us *User) UpdateUser(id uint, fileds interface{}, request *user.UpdateUser
 
 // DeleteUser 根据用户 ID 删除用户
 func (us *User) DeleteUser(id uint) *utils.Response {
-	if err := us.userRepo.Delete(map[string]interface{}{"id": id}); err != nil {
+	values := map[string]interface{}{
+		"status": 2,
+		"avatar": fmt.Sprintf("%s/%s/%s",config.AppConfig.Storage.Base, config.AppConfig.Storage.Images, "logout.jpeg"),
+	}
+	fileds := []string{"status", "avatar"}
+	if err := us.userRepo.Update(map[string]interface{}{"id": id}, fileds, values); err != nil {
 		logrus.Error(err.Error())
 		return utils.Error(http.StatusInternalServerError, "服务器内部错误")
 	}

@@ -122,7 +122,7 @@ func (uc *UserController) UpdateUser(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-// DeleteUser 根据用户 ID 删除用户
+// DeleteUser 软删除（注销） status 设置为 2
 func (uc *UserController) DeleteUser(c *gin.Context) {
 	id, err := GetUserID(c) // 从上下文中获取用户 ID
 	if err != nil {

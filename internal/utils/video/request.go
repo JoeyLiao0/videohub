@@ -19,7 +19,7 @@ type GetCommentsRequest struct {
 }
 
 type AddCommentRequest struct {
-	UserID          uint   `json:"user_id" binding:"required"`
+	Username        string `json:"name" binding:"required"`
 	CommentContent  string `json:"comment" binding:"required"`
 	FatherCommentID int    `json:"father_comment_id" binding:"required"`
 	VideoID         string `json:"vid" binding:"required"`
@@ -33,17 +33,17 @@ type DeleteCommentRequest struct {
 type UploadChunkRequest struct {
 	UploadID  string                `form:"upload_id" binding:"required"`
 	ChunkData *multipart.FileHeader `form:"chunk_data" binding:"required"`
-	ChunkID   int                   `form:"chunk_id" binding:"required"`
+	ChunkID   int                   `form:"chunk_id" binding:"required"`  // 从 1 开始
 	ChunkSize int                   `form:"chunk_size" binding:"required"`
 	ChunkHash string                `form:"chunk_hash" binding:"required"`
 }
 
 type CompleteUploadRequest struct {
-	UploadID    string                `form:"upload_id" binding:"required"`
-	ChunkEndID  int                   `form:"chunk_end_id" binding:"required"`
-	Title       string                `form:"title" binding:"required"`
-	Description string                `form:"description" binding:"required"`
-	Cover       *multipart.FileHeader `form:"cover" binding:"required"`
-	VideoHash   string                `form:"video_hash" binding:"required"`
-	UploaderID  uint                  `form:"uploader_id" binding:"required"`
+	UploadID     string                `form:"upload_id" binding:"required"`
+	ChunkEndID   int                   `form:"chunk_end_id" binding:"required"`
+	Title        string                `form:"title" binding:"required"`
+	Description  string                `form:"description" binding:"required"`
+	Cover        *multipart.FileHeader `form:"cover" binding:"required"`
+	VideoHash    string                `form:"video_hash" binding:"required"`
+	UploaderName string                `form:"uploader_name" binding:"required"`
 }
