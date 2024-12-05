@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"videohub/global"
 	"videohub/internal/model"
 
 	"gorm.io/gorm"
@@ -20,6 +21,7 @@ func (vr *Video) Search(conditions interface{}, limit int, result interface{}) e
 
 // CreateVideo 保存完整视频到数据库
 func (vr *Video) CreateVideo(value *model.Video) error {
+	global.Rdb.Set(global.Ctx, "video:"+value.UploadID+":views", 0, 0)
 	return vr.DB.Model(&model.Video{}).Create(value).Error
 }
 
@@ -29,7 +31,7 @@ func (vr *Video) UpdateVideoStatus(id string, newStatus int8) error {
 }
 
 // 查询视频列表
-func (vr *Video) FindVideos(like string, status, page, limit int, result interface{}) error {
+func (vr *Video) FindVideos(like string, status, page, limit int, fileds, result interface{}) error {
 	query := vr.DB.Model(&model.Video{})
 	query = query.Where("video_status = ?", status)
 
@@ -41,7 +43,7 @@ func (vr *Video) FindVideos(like string, status, page, limit int, result interfa
 	// 计算偏移量
 	offset := (page - 1) * limit
 	// 分页查询
-	err := query.Offset(offset).Limit(limit).Find(result).Error
+	err := query.Offset(offset).Limit(limit).Select(fileds).Find(result).Error
 	if err != nil {
 		return err
 	}

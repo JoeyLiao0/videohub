@@ -47,10 +47,16 @@ func InitRouter() *gin.Engine {
 	// CORS 跨域中间件
 	r.Use(middleware.CORSMiddleware())
 
-	// 设置静态文件夹路径
-	r.Static("/storage/images", config.AppConfig.Storage.Images)            // 图像存储
-	r.Static("storage/videos/data", config.AppConfig.Storage.VideosData)    // 视频存储
-	r.Static("/storage/videos/cover", config.AppConfig.Storage.VideosCover) // 视频封面存储
+	staticGroup := r.Group("/static")
+	{
+		// 设置静态文件夹路径  (url前缀, 文件夹路径)
+		staticGroup.Static(config.AppConfig.Static.Avatar, config.AppConfig.Storage.Images)     // 头像存储
+		staticGroup.Static(config.AppConfig.Static.Cover, config.AppConfig.Storage.VideosCover) // 视频封面存储
+		staticGroup.Use(middleware.CountViewMiddleware())
+		{
+			staticGroup.Static(config.AppConfig.Static.Video, config.AppConfig.Storage.VideosData)  // 视频存储
+		}
+	}
 
 	adminRouter := r.Group("/admin")
 	{

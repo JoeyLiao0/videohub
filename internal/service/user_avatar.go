@@ -36,7 +36,10 @@ func (uas *UserAvatar) UploadUserAvatar(id uint, request *user.UploadAvatarReque
 		return utils.Error(http.StatusInternalServerError, err.Error())
 	}
 
-	if err := uas.userRepo.Update(map[string]interface{}{"id": id}, "avatar", map[string]interface{}{"avatar": config.AppConfig.Storage.Base + "/" + filePath}); err != nil {
+	values := map[string]interface{}{
+		"avatar": utils.GetURLPath(config.AppConfig.Static.Avatar, fmt.Sprintf("%d%s", id, fileExt)),
+	}
+	if err := uas.userRepo.Update(map[string]interface{}{"id": id}, "avatar", values); err != nil {
 		logrus.Error(err.Error())
 		return utils.Error(http.StatusInternalServerError, "服务器内部错误")
 	}

@@ -107,8 +107,8 @@ func (vus *VideoUpload) HandleVideoComplete(request *video.CompleteUploadRequest
 		UploadID:     request.UploadID,
 		Title:        request.Title,
 		Description:  request.Description,
-		CoverPath:    config.AppConfig.Storage.Base + "/" + coverPath,
-		VideoPath:    config.AppConfig.Storage.Base + "/" + videoPath,
+		CoverPath:    utils.GetURLPath(config.AppConfig.Static.Cover, fmt.Sprintf("%s%s", request.UploadID, coverExt)),
+		VideoPath:    utils.GetURLPath(config.AppConfig.Static.Video, fmt.Sprintf("%s%s", request.UploadID, filepath.Ext(chunks[0]))),
 		UploaderName: request.UploaderName,
 	}
 
