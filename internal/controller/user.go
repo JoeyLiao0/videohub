@@ -240,8 +240,8 @@ func (uc *UserController) GetCollections(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	fmt.Println("Get videos for user", id)
-	// TODO
+	response := uc.userCollectionService.GetUserCollections(id)
+	c.JSON(http.StatusOK, response)
 }
 
 // UpdateCollections 更新用户收藏的视频

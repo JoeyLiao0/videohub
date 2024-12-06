@@ -32,7 +32,7 @@ func (vc *VideoController) GetVideos(c *gin.Context) {
 	// 获取 Query 参数
 	// 或者使用 c.DefaultQuery()
 	var request video.GetVideosRequest
-	if err := c.ShouldBindQuery(&request); err != nil {
+	if err := c.ShouldBind(&request); err != nil {
 		logrus.Debug(err.Error())
 		c.JSON(http.StatusOK, utils.Error(http.StatusBadRequest, "请求无效"))
 		return
@@ -77,7 +77,7 @@ func (vc *VideoController) LikeVideo(c *gin.Context) {
 // GetComments 获取视频评论
 func (vc *VideoController) GetComments(c *gin.Context) {
 	var request video.GetCommentsRequest
-	if err := c.ShouldBindQuery(&request); err != nil {
+	if err := c.ShouldBind(&request); err != nil {
 		logrus.Debug(err.Error())
 		c.JSON(http.StatusOK, utils.Error(http.StatusBadRequest, "请求无效"))
 		return

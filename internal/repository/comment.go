@@ -19,6 +19,14 @@ func (r *Comment) Search(conditions interface{}, limit int, result interface{}) 
 	return r.DB.Model(&model.Comment{}).Where(conditions).Limit(limit).Find(result).Error
 }
 
+func (r *Comment) Select(conditions interface{}, limit int, fields, result interface{}) error {
+	return r.DB.Model(&model.Comment{}).Where(conditions).Limit(limit).Select(fields).Find(result).Error
+}
+
+func (r *Comment) Join(conditions interface{}, limit int, joins string, fields, result interface{}) error {
+	return r.DB.Model(&model.Comment{}).Where(conditions).Limit(limit).Select(fields).Joins(joins).Find(result).Error
+}
+
 // GetCommentsByVideo获取指定视频的评论列表
 func (r *Comment) GetCommentsByVideo(videoID string) ([]model.Comment, error) {
 	var comments []model.Comment

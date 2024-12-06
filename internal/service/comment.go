@@ -23,7 +23,17 @@ func NewComment(cr *repository.Comment, vr *repository.Video) *Comment {
 // GetComments获取视频的所有评论
 func (cs *Comment) GetComments(request *video.GetCommentsRequest) *utils.Response {
 	var response video.GetCommentsResponse
-	if err := cs.commentRepo.Search(map[string]interface{}{"video_id": request.VideoID, "status": 0}, -1, &response.Comments); err != nil {
+	conditions := map[string]interface{}{
+		"comments.video_id": request.VideoID,
+		"comments.status": 0,
+	}
+	joins := "left join users on comments.user_id = users.id"
+	fields := []string{"id", "created_at", "comment_content", "video_id", "parent_id", "likes", "status"}
+	for i, field := range fields {
+		fields[i] = "comments." + field
+	}
+	fields = append(fields, "users.username as username")
+	if err := cs.commentRepo.Join(conditions, -1, joins, fields, &response.Comments); err != nil {
 		logrus.Error(err.Error())
 		return utils.Error(http.StatusInternalServerError, "服务器内部错误")
 	}

@@ -45,5 +45,6 @@ func (uv *UserVideo) GetUserVideos(id uint) *utils.Response {
 		}
 		response.Videos[i].Views = views
 	}
+	logrus.Debug("Get user videos successfully")
 	return utils.Ok(http.StatusOK, &response)
 }

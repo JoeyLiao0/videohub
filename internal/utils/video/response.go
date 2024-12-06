@@ -18,7 +18,7 @@ type VideoInfo struct {
 type CommentInfo struct {
 	ID             uint   `json:"id"`                // 评论ID
 	CreatedAt      int64  `json:"created_at"`        // 评论发布时间
-	Username       string `json:"name"`              // 评论发布者ID
+	Username       string `json:"name"`              // 评论发布者用户名
 	CommentContent string `json:"comment"`           // 评论内容
 	VideoID        string `json:"video_id"`          // 视频唯一标识
 	ParentID       int    `json:"father_comment_id"` // 父评论ID

@@ -28,7 +28,3 @@ type GetUserResponse struct {
 type VideoListResponse struct {
 	Videos []video.VideoInfo `json:"videos"`
 }
-
-type GetCommentsResponse struct {
-	Comments []video.CommentInfo `json:"comments"`
-}
