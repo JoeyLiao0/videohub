@@ -27,6 +27,10 @@ func (vr *Video) Join(conditions interface{}, limit int, joins string, fields, r
 	return vr.DB.Model(&model.Video{}).Where(conditions).Limit(limit).Select(fields).Joins(joins).Find(result).Error
 }
 
+func (vr *Video) Delete(conditions interface{}) error {
+	return vr.DB.Where(conditions).Delete(&model.Video{}).Error
+}
+
 // CreateVideo 保存完整视频到数据库
 func (vr *Video) CreateVideo(value *model.Video) error {
 	global.Rdb.Set(global.Ctx, "video:"+value.UploadID+":views", 0, 0)

@@ -48,3 +48,16 @@ func (uv *UserVideo) GetUserVideos(id uint) *utils.Response {
 	logrus.Debug("Get user videos successfully")
 	return utils.Ok(http.StatusOK, &response)
 }
+
+func (uv *UserVideo) DeleteUserVideo(id uint, request *user.DeleteVideoRequest) *utils.Response {
+	conditions := map[string]interface{}{
+		"uploader_id": id,
+		"upload_id": request.VideoID,
+	}
+	if err := uv.videoRepo.Delete(conditions); err != nil {
+		logrus.Error(err.Error())
+		return utils.Error(http.StatusInternalServerError, "服务器内部错误")
+	}
+	logrus.Debug("Delete video successfully")
+	return utils.Success(http.StatusOK)
+}

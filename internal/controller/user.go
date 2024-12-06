@@ -2,7 +2,6 @@ package controller
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"videohub/global"
 	"videohub/internal/service"
@@ -226,42 +225,64 @@ func (uc *UserController) GetVideos(c *gin.Context) {
 func (uc *UserController) DeleteVideo(c *gin.Context) {
 	id, err := GetUserID(c) // 从上下文中获取用户 ID
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		logrus.Debug(err.Error())
+		c.JSON(http.StatusOK, utils.Error(http.StatusUnauthorized, "未授权"))
 		return
 	}
-	fmt.Println("Get videos for user", id)
-	// TODO
+	var request user.DeleteVideoRequest
+	if err := c.ShouldBind(&request); err != nil {
+		logrus.Debug(err.Error())
+		c.JSON(http.StatusOK, utils.Error(http.StatusBadRequest, "请求无效"))
+		return
+	}
+	response := uc.userVideoService.DeleteUserVideo(id, &request)
+	c.JSON(http.StatusOK, response)
 }
 
 // GetCollections 获取用户收藏的视频列表
 func (uc *UserController) GetCollections(c *gin.Context) {
 	id, err := GetUserID(c) // 从上下文中获取用户 ID
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		logrus.Debug(err.Error())
+		c.JSON(http.StatusOK, utils.Error(http.StatusUnauthorized, "未授权"))
 		return
 	}
 	response := uc.userCollectionService.GetUserCollections(id)
 	c.JSON(http.StatusOK, response)
 }
 
-// UpdateCollections 更新用户收藏的视频
-func (uc *UserController) UpdateCollections(c *gin.Context) {
+// AddCollection 更新用户收藏的视频
+func (uc *UserController) AddCollection(c *gin.Context) {
 	id, err := GetUserID(c) // 从上下文中获取用户 ID
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		logrus.Debug(err.Error())
+		c.JSON(http.StatusOK, utils.Error(http.StatusUnauthorized, "未授权"))
 		return
 	}
-	fmt.Println("Get videos for user", id)
-	// TODO
+	var request user.AddCollectionsRequest
+	if err := c.ShouldBindJSON(&request); err != nil {
+		logrus.Debug(err.Error())
+		c.JSON(http.StatusOK, utils.Error(http.StatusBadRequest, "请求无效"))
+		return
+	}
+	response := uc.userCollectionService.AddUserCollection(id, &request)
+	c.JSON(http.StatusOK, response)
 }
 
-// DeleteCollections 删除用户收藏的视频
-func (uc *UserController) DeleteCollections(c *gin.Context) {
+// DeleteCollection 删除用户收藏的视频
+func (uc *UserController) DeleteCollection(c *gin.Context) {
 	id, err := GetUserID(c) // 从上下文中获取用户 ID
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		logrus.Debug(err.Error())
+		c.JSON(http.StatusOK, utils.Error(http.StatusUnauthorized, "未授权"))
 		return
 	}
-	fmt.Println("Get videos for user", id)
-	// TODO
+	var request user.DeleteCollectionsRequest
+	if err := c.ShouldBindJSON(&request); err != nil {
+		logrus.Debug(err.Error())
+		c.JSON(http.StatusOK, utils.Error(http.StatusBadRequest, "请求无效"))
+		return
+	}
+	response := uc.userCollectionService.DeleteUserCollection(id, &request)
+	c.JSON(http.StatusOK, response)
 }

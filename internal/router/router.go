@@ -113,9 +113,9 @@ func InitRouter() *gin.Engine {
 			// 获取用户视频收藏列表
 			userRouter.GET("/collections", userController.GetCollections)
 			// 用户收藏视频
-			userRouter.POST("/collections", userController.UpdateCollections)
+			userRouter.POST("/collections", userController.AddCollection)
 			// 用户删除收藏视频
-			userRouter.DELETE("/collections", userController.DeleteCollections)
+			userRouter.DELETE("/collections", userController.DeleteCollection)
 		}
 	}
 	// 视频路由组

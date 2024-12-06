@@ -3,6 +3,7 @@ package service
 import (
 	"net/http"
 	"videohub/global"
+	"videohub/internal/model"
 	"videohub/internal/repository"
 	"videohub/internal/utils"
 	"videohub/internal/utils/user"
@@ -46,4 +47,38 @@ func (uc *UserCollection) GetUserCollections(id uint) *utils.Response {
 	}
 	logrus.Debug("Get user collections successfully")
 	return utils.Ok(http.StatusOK, &response)
+}
+
+func (uc *UserCollection) AddUserCollection(userID uint, request *user.AddCollectionsRequest) *utils.Response {
+	if count, err := uc.collectionRepo.Count(map[string]interface{}{"user_id": userID, "video_id": request.VideoID}); err != nil || count > 0 {
+		if err != nil {
+			logrus.Error(err.Error())
+			return utils.Error(http.StatusInternalServerError, "服务器内部错误")
+		} else {
+			logrus.Debug("Video has been collected")
+			return utils.Error(http.StatusBadRequest, "视频已收藏")
+		}
+	}
+
+	collection := &model.Collection{
+		UserID:  userID,
+		VideoID: request.VideoID,
+	}
+	if err := uc.collectionRepo.Create(collection); err != nil {
+		logrus.Error(err.Error())
+		return utils.Error(http.StatusInternalServerError, "服务器内部错误")
+	}
+
+	logrus.Debug("Add user collection successfully")
+	return utils.Ok(http.StatusOK, nil)
+}
+
+func (uc *UserCollection) DeleteUserCollection(userID uint, request *user.DeleteCollectionsRequest) *utils.Response {
+	if err := uc.collectionRepo.Delete(map[string]interface{}{"user_id": userID, "video_id": request.VideoID}); err != nil {
+		logrus.Error(err.Error())
+		return utils.Error(http.StatusInternalServerError, "服务器内部错误")
+	}
+
+	logrus.Debug("Delete user collection successfully")
+	return utils.Ok(http.StatusOK, nil)
 }

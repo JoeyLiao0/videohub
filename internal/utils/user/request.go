@@ -36,3 +36,15 @@ type UpdatePasswordRequest struct {
 type SendEmailVerificationRequest struct {
 	Email string `json:"email" binding:"required" validate:"email"`
 }
+
+type DeleteVideoRequest struct {
+	VideoID string `form:"vid" binding:"required"`
+}
+
+type AddCollectionsRequest struct {
+	VideoID string `json:"video_id" binding:"required"`
+}
+
+type DeleteCollectionsRequest struct {
+	VideoID string `json:"video_id" binding:"required"`
+}
