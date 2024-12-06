@@ -5,31 +5,31 @@ import (
 	"videohub/global"
 	"videohub/internal/repository"
 	"videohub/internal/utils"
-	"videohub/internal/utils/video"
+	"videohub/internal/utils/user"
 
 	"github.com/redis/go-redis/v9"
 	"github.com/sirupsen/logrus"
 )
 
-// VideoService 提供视频业务逻辑
-type VideoSearch struct {
-	videoRepo *repository.Video
+type UserVideo struct {
+	videoRepo *repository.Video // 视频仓库的指针，用于操作视频数据
 }
 
-// VideoService 实例
-func NewVideoSearch(vr *repository.Video) *VideoSearch {
-	return &VideoSearch{videoRepo: vr}
+// NewUserVideo 创建一个新的 UserVideo 实例
+func NewUserVideo(vr *repository.Video) *UserVideo {
+	return &UserVideo{videoRepo: vr}
 }
 
-// 获取视频列表
-func (vs *VideoSearch) GetVideos(request *video.GetVideosRequest) *utils.Response {
-	var response video.GetVideosResponse
+func (uv *UserVideo) GetUserVideos(id uint) *utils.Response {
+	var response user.VideoListResponse
+	conditions := map[string]interface{}{"videos.uploader_id": id}
+	joins := "left join users on videos.uploader_id = users.id"
 	fields := []string{"upload_id", "created_at", "title", "description", "cover_path", "video_path", "video_status", "likes", "favorites", "comments"}
 	for i, field := range fields {
 		fields[i] = "videos." + field
 	}
 	fields = append(fields, "users.username as uploader_name")
-	if err := vs.videoRepo.FindVideos(request.Like, *request.Status, request.Page, request.Limit, fields, &response.Videos); err != nil {
+	if err := uv.videoRepo.Join(conditions, -1, joins, fields, &response.Videos); err != nil {
 		logrus.Error(err.Error())
 		return utils.Error(http.StatusInternalServerError, "服务器内部错误")
 	}
@@ -45,8 +45,5 @@ func (vs *VideoSearch) GetVideos(request *video.GetVideosRequest) *utils.Respons
 		}
 		response.Videos[i].Views = views
 	}
-	// response.Count = int64(len(response.Videos))
-	// response.Page = request.Page
-	// response.Limit = request.Limit
 	return utils.Ok(http.StatusOK, &response)
 }

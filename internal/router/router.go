@@ -29,9 +29,11 @@ func InitRouter() *gin.Engine {
 	VideoUpdateStatusService := service.NewVideoUpdateStatus(videoRepo)
 	videoSearchService := service.NewVideoSearch(videoRepo)
 	commentService := service.NewComment(commentRepo, videoRepo)
+	userVideoService := service.NewUserVideo(videoRepo)
+	userCollectionService := service.NewUserCollection(collectionRepo)
 
 	//3、service 到 controller
-	userController := controller.NewUserController(userAvatarService, userListService, userService)
+	userController := controller.NewUserController(userAvatarService, userListService, userService, userVideoService, userCollectionService)
 	videoController := controller.NewVideoController(videoUploadService, VideoUpdateStatusService, videoSearchService, commentService)
 	adminController := controller.NewAdminController(userAvatarService, userListService, userService)
 
@@ -54,7 +56,7 @@ func InitRouter() *gin.Engine {
 		staticGroup.Static(config.AppConfig.Static.Cover, config.AppConfig.Storage.VideosCover) // 视频封面存储
 		staticGroup.Use(middleware.CountViewMiddleware())
 		{
-			staticGroup.Static(config.AppConfig.Static.Video, config.AppConfig.Storage.VideosData)  // 视频存储
+			staticGroup.Static(config.AppConfig.Static.Video, config.AppConfig.Storage.VideosData) // 视频存储
 		}
 	}
 

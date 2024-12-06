@@ -14,15 +14,24 @@ import (
 )
 
 type UserController struct {
-	userAvatarService *service.UserAvatar // 用户头像服务
-	userListService   *service.UserList   // 用户列表服务
-	userService       *service.User       // 用户服务
+	userAvatarService     *service.UserAvatar     // 用户头像服务
+	userListService       *service.UserList       // 用户列表服务
+	userService           *service.User           // 用户服务
+	userVideoService      *service.UserVideo      // 添加用户视频服务
+	userCollectionService *service.UserCollection // 添加用户收藏服务
 }
 
-func NewUserController(uas *service.UserAvatar, uls *service.UserList, us *service.User) *UserController {
-	return &(UserController{userAvatarService: uas, userListService: uls, userService: us})
+// 修改 NewUserController:
+func NewUserController(uas *service.UserAvatar, uls *service.UserList, us *service.User,
+	uvs *service.UserVideo, ucs *service.UserCollection) *UserController {
+	return &(UserController{
+		userAvatarService:     uas,
+		userListService:       uls,
+		userService:           us,
+		userVideoService:      uvs,
+		userCollectionService: ucs,
+	})
 }
-
 func GetUserID(c *gin.Context) (uint, error) {
 	idValue, exists := c.Get("id")
 	if !exists {
@@ -104,21 +113,21 @@ func (uc *UserController) UpdateUser(c *gin.Context) {
 		return
 	}
 
-	var fileds []string
+	var fields []string
 	if request.Email != "" {
 		if err := global.Validate.Struct(request); err != nil {
 			logrus.Debug(err.Error())
 			c.JSON(http.StatusOK, utils.Error(http.StatusBadRequest, "邮箱格式错误"))
 			return
 		}
-		fileds = append(fileds, "email")
+		fields = append(fields, "email")
 	}
 
 	if request.Username != "" {
-		fileds = append(fileds, "username")
+		fields = append(fields, "username")
 	}
 
-	response := uc.userService.UpdateUser(id, fileds, &request)
+	response := uc.userService.UpdateUser(id, fields, &request)
 	c.JSON(http.StatusOK, response)
 }
 
@@ -205,11 +214,12 @@ func (uc *UserController) SendEmailVerification(c *gin.Context) {
 func (uc *UserController) GetVideos(c *gin.Context) {
 	id, err := GetUserID(c) // 从上下文中获取用户 ID
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		logrus.Debug(err.Error())
+		c.JSON(http.StatusOK, utils.Error(http.StatusUnauthorized, "未授权"))
 		return
 	}
-	fmt.Println("Get videos for user", id)
-	// TODO
+	response := uc.userVideoService.GetUserVideos(id)
+	c.JSON(http.StatusOK, response)
 }
 
 // DeleteVideo 删除用户上传的视频

@@ -119,7 +119,7 @@ func (vc *VideoController) DeleteComment(c *gin.Context) {
 	}
 
 	var request video.DeleteCommentRequest
-	if err := c.ShouldBindJSON(&request); err != nil {
+	if err := c.ShouldBind(&request); err != nil {
 		logrus.Debug(err.Error())
 		c.JSON(http.StatusOK, utils.Error(http.StatusBadRequest, "请求无效"))
 		return

@@ -1,5 +1,9 @@
 package user
 
+import (
+	"videohub/internal/utils/video"
+)
+
 type UserInfo struct {
 	Username  string `json:"name" binding:"required"`
 	Email     string `json:"email" binding:"required"`
@@ -19,4 +23,12 @@ type AccessTokenResponse struct {
 
 type GetUserResponse struct {
 	User UserInfo `json:"user" binding:"required"`
+}
+
+type VideoListResponse struct {
+	Videos []video.VideoInfo `json:"videos"`
+}
+
+type GetCommentsResponse struct {
+	Comments []video.CommentInfo `json:"comments"`
 }

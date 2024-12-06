@@ -104,12 +104,12 @@ func (vus *VideoUpload) HandleVideoComplete(request *video.CompleteUploadRequest
 	}
 
 	newVideo := model.Video{
-		UploadID:     request.UploadID,
-		Title:        request.Title,
-		Description:  request.Description,
-		CoverPath:    utils.GetURLPath(config.AppConfig.Static.Cover, fmt.Sprintf("%s%s", request.UploadID, coverExt)),
-		VideoPath:    utils.GetURLPath(config.AppConfig.Static.Video, fmt.Sprintf("%s%s", request.UploadID, filepath.Ext(chunks[0]))),
-		UploaderName: request.UploaderName,
+		UploadID:    request.UploadID,
+		Title:       request.Title,
+		Description: request.Description,
+		CoverPath:   utils.GetURLPath(config.AppConfig.Static.Cover, fmt.Sprintf("%s%s", request.UploadID, coverExt)),
+		VideoPath:   utils.GetURLPath(config.AppConfig.Static.Video, fmt.Sprintf("%s%s", request.UploadID, filepath.Ext(chunks[0]))),
+		UploaderID:  request.UploaderID,
 	}
 
 	// 保存完整视频路径和封面路径

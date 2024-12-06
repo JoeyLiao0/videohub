@@ -19,6 +19,14 @@ func (vr *Video) Search(conditions interface{}, limit int, result interface{}) e
 	return vr.DB.Model(&model.Video{}).Where(conditions).Limit(limit).Find(result).Error
 }
 
+func (vr *Video) Select(conditions interface{}, limit int, fields, result interface{}) error {
+	return vr.DB.Model(&model.Video{}).Where(conditions).Limit(limit).Select(fields).Find(result).Error
+}
+
+func (vr *Video) Join(conditions interface{}, limit int, joins string, fields, result interface{}) error {
+	return vr.DB.Model(&model.Video{}).Where(conditions).Limit(limit).Select(fields).Joins(joins).Find(result).Error
+}
+
 // CreateVideo 保存完整视频到数据库
 func (vr *Video) CreateVideo(value *model.Video) error {
 	global.Rdb.Set(global.Ctx, "video:"+value.UploadID+":views", 0, 0)
@@ -31,22 +39,21 @@ func (vr *Video) UpdateVideoStatus(id string, newStatus int8) error {
 }
 
 // 查询视频列表
-func (vr *Video) FindVideos(like string, status, page, limit int, fileds, result interface{}) error {
+func (vr *Video) FindVideos(like string, status, page, limit int, fields, result interface{}) error {
 	query := vr.DB.Model(&model.Video{})
-	query = query.Where("video_status = ?", status)
+	query = query.Where("videos.video_status = ?", status)
 
 	// 标题模糊搜索
 	if like != "" {
-		query = query.Where("title LIKE ?", "%"+like+"%")
+		query = query.Where("videos.title LIKE ?", "%"+like+"%")
 	}
 
 	// 计算偏移量
 	offset := (page - 1) * limit
 	// 分页查询
-	err := query.Offset(offset).Limit(limit).Select(fileds).Find(result).Error
+	err := query.Offset(offset).Limit(limit).Select(fields).Joins("left join users on videos.uploader_id = users.id").Find(result).Error
 	if err != nil {
 		return err
 	}
-
 	return nil
 }
