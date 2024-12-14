@@ -31,6 +31,7 @@ func NewUserController(uas *service.UserAvatar, uls *service.UserList, us *servi
 		userCollectionService: ucs,
 	})
 }
+
 func GetUserID(c *gin.Context) (uint, error) {
 	idValue, exists := c.Get("id")
 	if !exists {

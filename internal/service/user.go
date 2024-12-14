@@ -130,7 +130,7 @@ func (us *User) CreateUser(request *user.CreateUserRequest) *utils.Response {
 	newUser.Salt = utils.GenerateSalt(16)
 	newUser.Password = utils.HashPassword(request.Password, newUser.Salt)
 	newUser.Email = request.Email
-	newUser.Avatar = fmt.Sprintf("%s/%s/%s", config.AppConfig.Storage.Base, config.AppConfig.Storage.Images, "tourist.jpeg")
+	newUser.Avatar = fmt.Sprintf("%s/%s/%s", config.AppConfig.Static.Base, config.AppConfig.Static.Avatar, "tourist.jpeg")
 
 	if err := us.userRepo.Create(&newUser); err != nil {
 		logrus.Error(err.Error())
@@ -180,7 +180,7 @@ func (us *User) UpdateUser(id uint, fileds interface{}, request *user.UpdateUser
 func (us *User) DeleteUser(id uint) *utils.Response {
 	values := map[string]interface{}{
 		"status": 2,
-		"avatar": fmt.Sprintf("%s/%s/%s",config.AppConfig.Storage.Base, config.AppConfig.Storage.Images, "logout.jpeg"),
+		"avatar": fmt.Sprintf("%s/%s/%s", config.AppConfig.Static.Base, config.AppConfig.Static.Avatar, "logout.jpeg"),
 	}
 	fileds := []string{"status", "avatar"}
 	if err := us.userRepo.Update(map[string]interface{}{"id": id}, fileds, values); err != nil {
@@ -235,5 +235,6 @@ func (us *User) SendEmailVerification(request *user.SendEmailVerificationRequest
 	}
 
 	logrus.Debug("Email verification sent successfully")
-	return utils.Success(http.StatusOK)
+	// return utils.Success(http.StatusOK)
+	return utils.Ok(http.StatusOK, map[string]string{"code": code})
 }
