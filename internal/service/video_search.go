@@ -14,11 +14,12 @@ import (
 // VideoService 提供视频业务逻辑
 type VideoSearch struct {
 	videoRepo *repository.Video
+	likeRepo  *repository.Like
 }
 
 // VideoService 实例
-func NewVideoSearch(vr *repository.Video) *VideoSearch {
-	return &VideoSearch{videoRepo: vr}
+func NewVideoSearch(vr *repository.Video, lr *repository.Like) *VideoSearch {
+	return &VideoSearch{videoRepo: vr, likeRepo: lr}
 }
 
 // 获取视频列表
@@ -44,9 +45,14 @@ func (vs *VideoSearch) GetVideos(request *video.GetVideosRequest) *utils.Respons
 			return utils.Error(http.StatusInternalServerError, "服务器内部错误")
 		}
 		response.Videos[i].Views = views
+		// 查询用户是否点赞
+		isLiked, err := vs.likeRepo.CheckVideoLike(request.UserID, response.Videos[i].UploadID)
+		if err != nil {
+			logrus.Debug(err.Error())
+			return utils.Error(http.StatusInternalServerError, "服务器内部错误")
+		}
+		response.Videos[i].IsLiked = isLiked
 	}
-	// response.Count = int64(len(response.Videos))
-	// response.Page = request.Page
-	// response.Limit = request.Limit
+
 	return utils.Ok(http.StatusOK, &response)
 }

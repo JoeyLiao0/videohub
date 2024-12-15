@@ -22,25 +22,24 @@ func NewComment(cr *repository.Comment, vr *repository.Video) *Comment {
 
 // GetComments获取视频的所有评论
 func (cs *Comment) GetComments(request *video.GetCommentsRequest) *utils.Response {
-	var response video.GetCommentsResponse
-	conditions := map[string]interface{}{
-		"comments.video_id": request.VideoID,
-		"comments.status": 0,
+	vid := request.VideoID
+	uid := request.UserID
+	// uid 为 0 的时候点赞全部为 false
+
+	// comments中先放入父评论为-1的评论，每个评论的reply数组先为空
+	comments, err := cs.commentRepo.GetCommentsByVideo(vid, uid)
+	if err != nil {
+		return utils.Error(http.StatusInternalServerError, "获取评论失败")
 	}
-	joins := "left join users on comments.user_id = users.id"
-	fields := []string{"id", "created_at", "comment_content", "video_id", "parent_id", "likes", "status"}
-	for i, field := range fields {
-		fields[i] = "comments." + field
+	// 填充每个评论的reply数组
+	comments, err = cs.commentRepo.FillPerCommentsReply(comments, uid)
+	if err != nil {
+		return utils.Error(http.StatusInternalServerError, "获取子评论失败")
 	}
-	fields = append(fields, "users.username as username")
-	if err := cs.commentRepo.Join(conditions, -1, joins, fields, &response.Comments); err != nil {
-		logrus.Error(err.Error())
-		return utils.Error(http.StatusInternalServerError, "服务器内部错误")
-	}
-	return utils.Ok(http.StatusOK, &response)
+	return utils.Ok(http.StatusOK, &video.GetCommentsResponse{CommentsOutside: comments})
 }
 
-// CreateComment创建评论s
+// CreateComment创建评论
 func (cs *Comment) CreateComment(request *video.AddCommentRequest) *utils.Response {
 	comment := &model.Comment{
 		UserID:         request.UserID,

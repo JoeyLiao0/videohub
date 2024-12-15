@@ -20,6 +20,7 @@ func InitRouter() *gin.Engine {
 	userRepo := repository.NewUser(db)
 	videoRepo := repository.NewVideo(db)
 	commentRepo := repository.NewComment(db)
+	likeRepo := repository.NewLike(db)
 
 	//2、repository 到 service
 	userAvatarService := service.NewUserAvatar(userRepo)
@@ -27,14 +28,15 @@ func InitRouter() *gin.Engine {
 	userService := service.NewUser(userRepo, collectionRepo, videoRepo)
 	videoUploadService := service.NewVideoUpload(videoRepo)
 	VideoUpdateStatusService := service.NewVideoUpdateStatus(videoRepo)
-	videoSearchService := service.NewVideoSearch(videoRepo)
+	videoSearchService := service.NewVideoSearch(videoRepo, likeRepo)
 	commentService := service.NewComment(commentRepo, videoRepo)
 	userVideoService := service.NewUserVideo(videoRepo)
 	userCollectionService := service.NewUserCollection(collectionRepo)
+	likeService := service.NewLike(videoRepo, likeRepo)
 
 	//3、service 到 controller
 	userController := controller.NewUserController(userAvatarService, userListService, userService, userVideoService, userCollectionService)
-	videoController := controller.NewVideoController(videoUploadService, VideoUpdateStatusService, videoSearchService, commentService)
+	videoController := controller.NewVideoController(videoUploadService, VideoUpdateStatusService, videoSearchService, likeService, commentService)
 	adminController := controller.NewAdminController(userAvatarService, userListService, userService)
 
 	// r := gin.Default()
@@ -129,7 +131,9 @@ func InitRouter() *gin.Engine {
 		videoRouter.Use(middleware.AuthMiddleware(0))
 		{
 			// 视频点赞
-			videoRouter.POST("", videoController.LikeVideo)
+			videoRouter.POST("/likes", videoController.LikeVideo)
+			// 视频取消点赞
+			videoRouter.DELETE("/likes", videoController.UnlikeVideo)
 			// 更新视频状态
 			videoRouter.PUT("", videoController.UpdateVideoStatus)
 			// 新增视频评论

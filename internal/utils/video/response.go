@@ -1,5 +1,7 @@
 package video
 
+import "videohub/internal/model"
+
 type VideoInfo struct {
 	UploadID     string `json:"id"`               // 视频 ID
 	CreatedAt    int64  `json:"published_at"`     // 视频发布时间
@@ -13,6 +15,7 @@ type VideoInfo struct {
 	Favorites    int    `json:"collection_count"` // 收藏数
 	Comments     int    `json:"comment_count"`    // 评论数
 	Views        int    `json:"view_count"`       // 观看数
+	IsLiked      bool   // 是否点赞
 }
 
 type CommentInfo struct {
@@ -33,6 +36,17 @@ type GetVideosResponse struct {
 	// Count  int64       `json:"count"`
 }
 
+type CommentsInside struct {
+	Comments model.Comment `json:"comments"`
+	IsLiked  bool          `json:"is_liked"`
+	ReplyTo  string        `json:"reply_to"`
+}
+type CommentsOutside struct {
+	Comments model.Comment    `json:"comments"`
+	IsLiked  bool             `json:"is_liked"`
+	Reply    []CommentsInside `json:"reply"`
+}
+
 type GetCommentsResponse struct {
-	Comments []CommentInfo `json:"comments"`
+	CommentsOutside []CommentsOutside `json:"comments"`
 }

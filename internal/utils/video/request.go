@@ -3,10 +3,11 @@ package video
 import "mime/multipart"
 
 type GetVideosRequest struct {
-	Status *int   `form:"status"` // 0-正常 1-审核 2-审核未通过 3-封禁
-	Like   string `form:"like"`
-	Page   int    `form:"page"`
-	Limit  int    `form:"limit"`
+	Status *int   `json:"status"` // 0-正常 1-审核 2-审核未通过 3-封禁
+	Like   string `json:"like"`
+	Page   int    `json:"page"`
+	Limit  int    `json:"limit"`
+	UserID uint   `json:"-"`
 }
 
 type UpdateVideoStatusRequest struct {
@@ -15,7 +16,8 @@ type UpdateVideoStatusRequest struct {
 }
 
 type GetCommentsRequest struct {
-	VideoID string `form:"vid" binding:"required"`
+	VideoID string `json:"vid" binding:"required"`
+	UserID  uint   // REMOVE required
 }
 
 type AddCommentRequest struct {
@@ -46,4 +48,15 @@ type CompleteUploadRequest struct {
 	Cover       *multipart.FileHeader `form:"cover" binding:"required"`
 	VideoHash   string                `form:"video_hash" binding:"required"`
 	UploaderID  uint                  `form:"uploader_id" binding:"required"`
+}
+
+type LikeVideoRequest struct {
+	UserID  uint   `json:"uid"`
+	VideoID string `json:"vid"`
+}
+
+type LikeCommentRequest struct {
+	UserID    uint
+	VideoID   string `json:"vid"`
+	CommentID uint   `json:"cid"`
 }
