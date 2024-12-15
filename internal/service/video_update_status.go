@@ -20,13 +20,13 @@ func NewVideoUpdateStatus(vr *repository.Video) *VideoUpdateStatus {
 }
 
 // UpdateVideoStatus更新视频状态
-func (vus *VideoUpdateStatus) UpdateVideoStatus(id string, request *video.UpdateVideoStatusRequest) *utils.Response {
+func (vus *VideoUpdateStatus) UpdateVideoStatus(request *video.UpdateVideoStatusRequest) *utils.Response {
 	// 验证状态合法性
 	if request.NewStatus < 0 || request.NewStatus > 3 {
 		return utils.Error(http.StatusBadRequest, "无效的视频状态")
 	}
 
-	if err := vus.videoRepo.UpdateVideoStatus(id, request.NewStatus); err != nil {
+	if err := vus.videoRepo.UpdateVideoStatus(request.VideoID, request.NewStatus); err != nil {
 		logrus.Error(err.Error())
 		return utils.Error(http.StatusInternalServerError, "更新视频状态失败")
 	}

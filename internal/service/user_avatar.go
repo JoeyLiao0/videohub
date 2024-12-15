@@ -24,21 +24,24 @@ func NewUserAvatar(ur *repository.User) *UserAvatar {
 
 // UploadUserAvatar 上传用户头像
 func (uas *UserAvatar) UploadUserAvatar(id uint, request *user.UploadAvatarRequest) *utils.Response {
-	if err := utils.CheckFile(request.Avatar, []string{".png", ".jpg"}, 8<<20); err != nil {
+	if err := utils.CheckFile(request.Avatar, []string{".png", ".jpg", ".jpeg"}, 8<<20); err != nil {
 		logrus.Debug(err.Error())
-		return utils.Error(http.StatusBadRequest, err.Error())
+		return utils.Error(http.StatusBadRequest, "文件格式错误或文件过大")
 	}
 
 	fileExt := filepath.Ext(request.Avatar.Filename)
-	filePath := fmt.Sprintf("%s/%d%s", config.AppConfig.Storage.Images, id, fileExt)
+	filePath := filepath.Join(config.AppConfig.Storage.Images, fmt.Sprintf("%d%s", id, fileExt))
 	if err := utils.SaveFile(request.Avatar, filePath); err != nil {
 		logrus.Error(err.Error())
 		return utils.Error(http.StatusInternalServerError, err.Error())
 	}
 
-	if err := uas.userRepo.Update(map[string]interface{}{"id": id}, "avatar", map[string]interface{}{"avatar": filePath}); err != nil {
+	values := map[string]interface{}{
+		"avatar": utils.GetURLPath(config.AppConfig.Static.Avatar, fmt.Sprintf("%d%s", id, fileExt)),
+	}
+	if err := uas.userRepo.Update(map[string]interface{}{"id": id}, "avatar", values); err != nil {
 		logrus.Error(err.Error())
-		return utils.Error(http.StatusInternalServerError, "更新用户头像信息失败")
+		return utils.Error(http.StatusInternalServerError, "服务器内部错误")
 	}
 
 	logrus.Debug("Upload user avatar successfully")

@@ -12,11 +12,9 @@ type AccessTokenRequest struct {
 }
 
 type CreateUserRequest struct {
-	Username string `json:"username" binding:"required"`
 	Password string `json:"password" binding:"required"`
 	Email    string `json:"email" binding:"required" validate:"email"`
 	Code     string `json:"code" binding:"required"`
-	Avatar   string `json:"avatar"`
 }
 
 type UpdateUserRequest struct {
@@ -37,4 +35,16 @@ type UpdatePasswordRequest struct {
 
 type SendEmailVerificationRequest struct {
 	Email string `json:"email" binding:"required" validate:"email"`
+}
+
+type DeleteVideoRequest struct {
+	VideoID string `form:"vid" binding:"required"`
+}
+
+type AddCollectionsRequest struct {
+	VideoID string `json:"video_id" binding:"required"`
+}
+
+type DeleteCollectionsRequest struct {
+	VideoID string `json:"video_id" binding:"required"`
 }

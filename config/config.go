@@ -12,6 +12,7 @@ var AppConfig *Config
 type Config struct {
 	Run     runConfig     `yaml:"run"`
 	Storage storageConfig `yaml:"storage"`
+	Static  staticConfig  `yaml:"static"`
 	Mysql   mysqlConfig   `yaml:"mysql"`
 	Redis   redisConfig   `yaml:"redis"`
 	JWT     jwtConfig     `yaml:"jwt"`
@@ -29,10 +30,18 @@ type runConfig struct {
 }
 
 type storageConfig struct {
+	Base        string `yaml:"base"`
 	VideosData  string `yaml:"videos_data"`
 	VideosCover string `yaml:"videos_cover"`
 	VideosChunk string `yaml:"videos_chunk"`
 	Images      string `yaml:"images"`
+}
+
+type staticConfig struct {
+	Base   string `yaml:"base"`
+	Video  string `yaml:"video"`
+	Cover  string `yaml:"cover"`
+	Avatar string `yaml:"avatar"`
 }
 
 type mysqlConfig struct {

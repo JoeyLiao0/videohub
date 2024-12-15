@@ -20,6 +20,7 @@ func InitRouter() *gin.Engine {
 	userRepo := repository.NewUser(db)
 	videoRepo := repository.NewVideo(db)
 	commentRepo := repository.NewComment(db)
+	likeRepo := repository.NewLike(db)
 
 	//2、repository 到 service
 	userAvatarService := service.NewUserAvatar(userRepo)
@@ -27,12 +28,15 @@ func InitRouter() *gin.Engine {
 	userService := service.NewUser(userRepo, collectionRepo, videoRepo)
 	videoUploadService := service.NewVideoUpload(videoRepo)
 	VideoUpdateStatusService := service.NewVideoUpdateStatus(videoRepo)
-	videoSearchService := service.NewVideoSearch(videoRepo)
+	videoSearchService := service.NewVideoSearch(videoRepo, likeRepo)
 	commentService := service.NewComment(commentRepo, videoRepo)
+	userVideoService := service.NewUserVideo(videoRepo)
+	userCollectionService := service.NewUserCollection(collectionRepo)
+	likeService := service.NewLike(videoRepo, likeRepo)
 
 	//3、service 到 controller
-	userController := controller.NewUserController(userAvatarService, userListService, userService)
-	videoController := controller.NewVideoController(videoUploadService, VideoUpdateStatusService, videoSearchService, commentService)
+	userController := controller.NewUserController(userAvatarService, userListService, userService, userVideoService, userCollectionService)
+	videoController := controller.NewVideoController(videoUploadService, VideoUpdateStatusService, videoSearchService, likeService, commentService)
 	adminController := controller.NewAdminController(userAvatarService, userListService, userService)
 
 	// r := gin.Default()
@@ -47,10 +51,16 @@ func InitRouter() *gin.Engine {
 	// CORS 跨域中间件
 	r.Use(middleware.CORSMiddleware())
 
-	// 设置静态文件夹路径
-	r.Static("/storage/images", config.AppConfig.Storage.Images)            // 图像存储
-	r.Static("/storage/videos", config.AppConfig.Storage.VideosData)        // 视频存储
-	r.Static("/storage/videos_cover", config.AppConfig.Storage.VideosCover) // 视频封面存储
+	staticGroup := r.Group("/static")
+	{
+		// 设置静态文件夹路径  (url前缀, 文件夹路径)
+		staticGroup.Static(config.AppConfig.Static.Avatar, config.AppConfig.Storage.Images)     // 头像存储
+		staticGroup.Static(config.AppConfig.Static.Cover, config.AppConfig.Storage.VideosCover) // 视频封面存储
+		staticGroup.Use(middleware.CountViewMiddleware())
+		{
+			staticGroup.Static(config.AppConfig.Static.Video, config.AppConfig.Storage.VideosData) // 视频存储
+		}
+	}
 
 	adminRouter := r.Group("/admin")
 	{
@@ -65,14 +75,14 @@ func InitRouter() *gin.Engine {
 			// 创建用户
 			adminRouter.POST("/users", adminController.CreateUser)
 			// 更新用户信息
-			adminRouter.PUT("/users/:id", adminController.UpdateUser)
+			adminRouter.PUT("/users", adminController.UpdateUser)
 
 			// 视频列表获取
 			adminRouter.GET("/videos", adminController.GetVideos)
 			// 视频状态修改
-			adminRouter.PUT("/videos/:vid", adminController.UpdateVideo)
+			adminRouter.PUT("/videos", adminController.UpdateVideo)
 			// 视频删除
-			adminRouter.DELETE("/videos/:vid", adminController.DeleteVideo)
+			adminRouter.DELETE("/videos", adminController.DeleteVideo)
 		}
 	}
 
@@ -101,13 +111,13 @@ func InitRouter() *gin.Engine {
 			// 用户发布视频列表获取
 			userRouter.GET("/videos", userController.GetVideos)
 			// 删除用户发布的视频
-			userRouter.DELETE("/videos/:vid", userController.DeleteVideo)
+			userRouter.DELETE("/videos", userController.DeleteVideo)
 			// 获取用户视频收藏列表
 			userRouter.GET("/collections", userController.GetCollections)
 			// 用户收藏视频
-			userRouter.POST("/collections", userController.UpdateCollections)
+			userRouter.POST("/collections", userController.AddCollection)
 			// 用户删除收藏视频
-			userRouter.DELETE("/collections", userController.DeleteCollections)
+			userRouter.DELETE("/collections", userController.DeleteCollection)
 		}
 	}
 	// 视频路由组
@@ -116,20 +126,24 @@ func InitRouter() *gin.Engine {
 		// 获取视频列表
 		videoRouter.GET("", videoController.GetVideos)
 		// 获取视频评论
-		videoRouter.GET("/:vid/comments", videoController.GetComments)
+		videoRouter.GET("/comments", videoController.GetComments)
 
 		videoRouter.Use(middleware.AuthMiddleware(0))
 		{
 			// 视频点赞
-			videoRouter.POST("/:vid", videoController.LikeVideo)
+			videoRouter.POST("/likes", videoController.LikeVideo)
+			// 视频取消点赞
+			videoRouter.DELETE("/likes", videoController.UnlikeVideo)
 			// 更新视频状态
-			videoRouter.PUT("/:vid", videoController.UpdateVideoStatus)
+			videoRouter.PUT("", videoController.UpdateVideoStatus)
 			// 新增视频评论
-			videoRouter.POST("/:vid/comments", videoController.AddComment)
-			// 评论点赞
-			videoRouter.POST("/:vid/comments/:cid", videoController.LikeComment)
+			videoRouter.POST("/comments", videoController.AddComment)
 			// 删除评论
-			videoRouter.DELETE("/:vid/comments/:cid", videoController.DeleteComment)
+			videoRouter.DELETE("/comments", videoController.DeleteComment)
+			// 评论点赞
+			videoRouter.POST("/comments/likes", videoController.LikeComment)
+			// 评论取消点赞
+			videoRouter.DELETE("/comments/likes", videoController.UnlikeComment)
 			// 视频分片上传
 			videoRouter.POST("/chunk", videoController.UploadChunk)
 			// 合并视频分片
