@@ -343,5 +343,5 @@ func GenerateUsername(n int) (string , error) {
 }
 
 func GetURLPath(dir, path string) string {
-	return fmt.Sprintf("%s/static%s/%s", config.AppConfig.Storage.Base, dir, path)
+	return fmt.Sprintf("%s%s/%s", config.AppConfig.Static.Base, dir, path)
 }

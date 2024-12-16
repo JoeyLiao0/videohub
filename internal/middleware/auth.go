@@ -2,8 +2,11 @@ package middleware
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
+	"time"
 	"videohub/config"
+	"videohub/global"
 	"videohub/internal/utils"
 
 	"github.com/gin-gonic/gin"
@@ -32,7 +35,14 @@ func AuthMiddleware(role int8) gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		logrus.Debugf("role: %v %T", payload.Role, payload.Role)
+
+		key := fmt.Sprintf("user:%d:is_online", payload.ID)
+		if global.Rdb.Exists(global.Ctx, key).Val() > 0 {
+			global.Rdb.Expire(global.Ctx, key, 1*time.Minute)
+		} else {
+			global.Rdb.Set(global.Ctx, key, true, 1*time.Minute)
+		}
+
 		if payload.Role == role {
 			c.Set("id", payload.ID)
 			c.Set("role", payload.Role)

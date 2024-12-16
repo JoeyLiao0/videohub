@@ -15,11 +15,12 @@ type AdminController struct {
 	userAvatarService *service.UserAvatar // 用户头像服务
 	userListService   *service.UserList   // 用户列表服务
 	userService       *service.User       // 用户服务
+	dataService       *service.Data       // 数据服务
 }
 
 // NewAdminController 创建一个新的 AdminController 实例
-func NewAdminController(uas *service.UserAvatar, uls *service.UserList, us *service.User) *AdminController {
-	return &(AdminController{userAvatarService: uas, userListService: uls, userService: us})
+func NewAdminController(uas *service.UserAvatar, uls *service.UserList, us *service.User, d *service.Data) *AdminController {
+	return &(AdminController{userAvatarService: uas, userListService: uls, userService: us, dataService: d})
 }
 
 // GetUser 获取管理员个人信息
@@ -61,5 +62,14 @@ func (ac *AdminController) UpdateVideo(c *gin.Context) {
 
 // DeleteVideo 删除视频
 func (ac *AdminController) DeleteVideo(c *gin.Context) {
+	// TODO
+}
+
+func (ac *AdminController) GetRealTimeData(c *gin.Context) {
+	resonse := ac.dataService.GetRealTimeData()
+	c.JSON(http.StatusOK, resonse)
+}
+
+func (ac *AdminController) GetHistoricalData(c *gin.Context) {
 	// TODO
 }

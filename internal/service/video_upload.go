@@ -22,10 +22,10 @@ func NewVideoUpload(vr *repository.Video) *VideoUpload {
 }
 
 func (vus *VideoUpload) HandleVideoChunk(request *video.UploadChunkRequest) *utils.Response {
-	if err := utils.CheckFile(request.ChunkData, []string{".mp4", ".avi", ".mov", ".mkv"}, 32<<20); err != nil {
-		logrus.Debug(err.Error())
-		return utils.Error(http.StatusBadRequest, "文件格式错误或文件过大")
-	}
+	// if err := utils.CheckFile(request.ChunkData, []string{".mp4", ".avi", ".mov", ".mkv"}, 32<<20); err != nil {
+	// 	logrus.Debug(err.Error())
+	// 	return utils.Error(http.StatusBadRequest, "文件格式错误或文件过大")
+	// }
 	fileSize := request.ChunkData.Size
 
 	// 验证切片大小(byte)
@@ -48,7 +48,8 @@ func (vus *VideoUpload) HandleVideoChunk(request *video.UploadChunkRequest) *uti
 	// 创建切片文件路径(/tmp/{uploadID}/{uploadID}_{chunkID}.xxx)
 	tmpDir := config.AppConfig.Storage.VideosChunk
 	saveDir := filepath.Join(tmpDir, string(request.UploadID))
-	tempSavePath := filepath.Join(saveDir, fmt.Sprintf("%s_%d%s", request.UploadID, request.ChunkID, filepath.Ext(request.ChunkData.Filename)))
+	// tempSavePath := filepath.Join(saveDir, fmt.Sprintf("%s_%d%s", request.UploadID, request.ChunkID, filepath.Ext(request.ChunkData.Filename)))
+	tempSavePath := filepath.Join(saveDir, fmt.Sprintf("%s_%d%s", request.UploadID, request.ChunkID, ".mp4"))
 
 	if err := utils.SaveFile(request.ChunkData, tempSavePath); err != nil {
 		logrus.Error(err.Error())
@@ -60,7 +61,7 @@ func (vus *VideoUpload) HandleVideoChunk(request *video.UploadChunkRequest) *uti
 }
 
 // HandleVideoComplete 处理组合完整视频逻辑
-func (vus *VideoUpload) HandleVideoComplete(request *video.CompleteUploadRequest) *utils.Response {
+func (vus *VideoUpload) HandleVideoComplete(id uint, request *video.CompleteUploadRequest) *utils.Response {
 	// 检查文件的类型、大小
 	if err := utils.CheckFile(request.Cover, []string{".png", ".jpg", ".jpeg"}, 8<<20); err != nil {
 		logrus.Debug(err.Error())
@@ -109,7 +110,7 @@ func (vus *VideoUpload) HandleVideoComplete(request *video.CompleteUploadRequest
 		Description: request.Description,
 		CoverPath:   utils.GetURLPath(config.AppConfig.Static.Cover, fmt.Sprintf("%s%s", request.UploadID, coverExt)),
 		VideoPath:   utils.GetURLPath(config.AppConfig.Static.Video, fmt.Sprintf("%s%s", request.UploadID, filepath.Ext(chunks[0]))),
-		UploaderID:  request.UploaderID,
+		UploaderID:  id,
 	}
 
 	// 保存完整视频路径和封面路径

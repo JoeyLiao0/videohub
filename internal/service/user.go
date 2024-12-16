@@ -57,6 +57,9 @@ func (us *User) Login(request *user.LoginRequest) *utils.Response {
 		return utils.Error(http.StatusInternalServerError, "服务器内部错误")
 	}
 
+	key := fmt.Sprintf("user:%d:is_online", result.ID)
+	global.Rdb.Set(global.Ctx, key, true, 1*time.Minute)
+
 	logrus.Debug("Login successfully")
 	return utils.Ok(http.StatusOK, user.LoginResponse{
 		AccessToken:  accessToken,
