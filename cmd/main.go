@@ -8,10 +8,12 @@ import (
 	"time"
 	"videohub/config"
 	"videohub/global"
+	"videohub/internal/repository"
 	"videohub/internal/router"
 	"videohub/internal/utils"
 	"videohub/logger"
 
+	"github.com/robfig/cron/v3"
 	"github.com/sirupsen/logrus"
 )
 
@@ -28,6 +30,10 @@ func main() {
 		Handler: r,
 	}
 
+	c := cron.New()
+	c.AddFunc("0 0 0 * * *", func() { repository.WriteStats(global.DB) })
+	c.Start()
+	// repository.WriteStats(global.DB)
 	go func() {
 		// 服务连接
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {

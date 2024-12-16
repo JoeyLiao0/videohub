@@ -7,5 +7,13 @@ type GetRealTimeDataResponse struct {
 	OnlineNum  int     `json:"online_num"`
 }
 
+type Item struct {
+	Date  string `json:"date"`
+	Value int    `json:"value"`
+}
+
 type GetHistoricalDataResponse struct {
+	Line []Item `json:"line"`
+	Area []Item `json:"area"`
+	Bar  []Item `json:"bar"`
 }

@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"videohub/internal/service"
 	"videohub/internal/utils"
+	"videohub/internal/utils/admin"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
@@ -15,11 +16,11 @@ type AdminController struct {
 	userAvatarService *service.UserAvatar // 用户头像服务
 	userListService   *service.UserList   // 用户列表服务
 	userService       *service.User       // 用户服务
-	dataService       *service.Data       // 数据服务
+	dataService       *service.Stats      // 数据服务
 }
 
 // NewAdminController 创建一个新的 AdminController 实例
-func NewAdminController(uas *service.UserAvatar, uls *service.UserList, us *service.User, d *service.Data) *AdminController {
+func NewAdminController(uas *service.UserAvatar, uls *service.UserList, us *service.User, d *service.Stats) *AdminController {
 	return &(AdminController{userAvatarService: uas, userListService: uls, userService: us, dataService: d})
 }
 
@@ -71,5 +72,12 @@ func (ac *AdminController) GetRealTimeData(c *gin.Context) {
 }
 
 func (ac *AdminController) GetHistoricalData(c *gin.Context) {
-	// TODO
+	var request admin.GetHistoricalDataRequest
+	if err := c.ShouldBind(&request); err != nil {
+		logrus.Debug(err.Error())
+		c.JSON(http.StatusOK, utils.Error(http.StatusBadRequest, "请求无效"))
+		return
+	}
+	response := ac.dataService.GetHistoricalData(&request)
+	c.JSON(http.StatusOK, response)
 }

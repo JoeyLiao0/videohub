@@ -21,6 +21,7 @@ func InitRouter() *gin.Engine {
 	videoRepo := repository.NewVideo(db)
 	commentRepo := repository.NewComment(db)
 	likeRepo := repository.NewLike(db)
+	statsRepo := repository.NewStats(db)
 
 	//2、repository 到 service
 	userAvatarService := service.NewUserAvatar(userRepo)
@@ -33,7 +34,7 @@ func InitRouter() *gin.Engine {
 	userVideoService := service.NewUserVideo(videoRepo)
 	userCollectionService := service.NewUserCollection(collectionRepo)
 	likeService := service.NewLike(videoRepo, likeRepo)
-	dataService := service.NewData()
+	dataService := service.NewStats(statsRepo)
 
 	//3、service 到 controller
 	userController := controller.NewUserController(userAvatarService, userListService, userService, userVideoService, userCollectionService)

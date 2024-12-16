@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"time"
 	"videohub/global"
+	"videohub/internal/model"
+	"videohub/internal/repository"
 	"videohub/internal/utils"
 	"videohub/internal/utils/admin"
 
@@ -12,14 +14,15 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type Data struct {
+type Stats struct {
+	statsRepo *repository.Stats
 }
 
-func NewData() *Data {
-	return &Data{}
+func NewStats(sr *repository.Stats) *Stats {
+	return &Stats{statsRepo: sr}
 }
 
-func (e *Data) GetRealTimeData() *utils.Response {
+func (e *Stats) GetRealTimeData() *utils.Response {
 	cpuPercent, err := cpu.Percent(time.Second, false)
 	if err != nil {
 		logrus.Error(err.Error())
@@ -55,7 +58,27 @@ func (e *Data) GetRealTimeData() *utils.Response {
 	})
 }
 
-func (e *Data) GetHistoricalData() *utils.Response {
-	// TODO
-	return utils.Ok(http.StatusOK, nil)
+func (e *Stats) GetHistoricalData(request *admin.GetHistoricalDataRequest) *utils.Response {
+	var result []model.Stats
+	if err := e.statsRepo.Search(request.StartDate, request.EndDate, -1, &result); err != nil {
+		logrus.Error(err.Error())
+		return utils.Error(http.StatusInternalServerError, "服务器内部错误")
+	}
+
+	var response admin.GetHistoricalDataResponse
+	for _, item := range result {
+		response.Line = append(response.Line, admin.Item{
+			Date:  item.Date.Format("2006-01-02"),
+			Value: item.VideoViews,
+		})
+		response.Area = append(response.Area, admin.Item{
+			Date:  item.Date.Format("2006-01-02"),
+			Value: item.NewAccounts,
+		})
+		response.Bar = append(response.Bar, admin.Item{
+			Date:  item.Date.Format("2006-01-02"),
+			Value: item.LoginCount,
+		})
+	}
+	return utils.Ok(http.StatusOK, response)
 }

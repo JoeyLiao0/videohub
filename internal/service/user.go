@@ -60,6 +60,9 @@ func (us *User) Login(request *user.LoginRequest) *utils.Response {
 	key := fmt.Sprintf("user:%d:is_online", result.ID)
 	global.Rdb.Set(global.Ctx, key, true, 1*time.Minute)
 
+	key = "login_users"
+	global.Rdb.SAdd(global.Ctx, key, result.ID)
+
 	logrus.Debug("Login successfully")
 	return utils.Ok(http.StatusOK, user.LoginResponse{
 		AccessToken:  accessToken,
