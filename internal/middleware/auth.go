@@ -36,10 +36,8 @@ func AuthMiddleware(role int8) gin.HandlerFunc {
 			return
 		}
 
-		key := fmt.Sprintf("user:%d:is_online", payload.ID)
-		if global.Rdb.Exists(global.Ctx, key).Val() > 0 {
-			global.Rdb.Expire(global.Ctx, key, 1*time.Minute)
-		} else {
+		if payload.Role == 0 {
+			key := fmt.Sprintf("user:%d:is_online", payload.ID)
 			global.Rdb.Set(global.Ctx, key, true, 1*time.Minute)
 		}
 

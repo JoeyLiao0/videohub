@@ -50,6 +50,7 @@ func (e *Stats) GetRealTimeData() *utils.Response {
 		cursor = nextCursor
 	}
 
+	logrus.Debug("Get real-time data successfully")
 	return utils.Ok(http.StatusOK, &admin.GetRealTimeDataResponse{
 		CPUPercent: cpuPercent[0],
 		MemTotal:   float64(virtualMem.Total) / 1e9,
@@ -69,7 +70,7 @@ func (e *Stats) GetHistoricalData(request *admin.GetHistoricalDataRequest) *util
 	for _, item := range result {
 		response.Line = append(response.Line, admin.Item{
 			Date:  item.Date.Format("2006-01-02"),
-			Value: item.VideoViews,
+			Value: item.NewVideoViews,
 		})
 		response.Area = append(response.Area, admin.Item{
 			Date:  item.Date.Format("2006-01-02"),
@@ -80,5 +81,6 @@ func (e *Stats) GetHistoricalData(request *admin.GetHistoricalDataRequest) *util
 			Value: item.LoginCount,
 		})
 	}
+	logrus.Debug("Get historical data successfully")
 	return utils.Ok(http.StatusOK, response)
 }

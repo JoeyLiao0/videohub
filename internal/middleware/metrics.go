@@ -14,17 +14,6 @@ import (
 
 func CountViewMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// token := c.GetHeader("Authorization")
-		// if token == "" {
-		// 	c.Next()
-		// 	return
-		// }
-		// payload, err := utils.ParseJWT(token, config.AppConfig.JWT.AccessTokenSecret)
-		// if err != nil {
-		// 	c.Next()
-		// 	return
-		// }
-		// id := payload.ID
 		path := c.Request.URL.Path
 		if c.Request.Method == http.MethodGet && strings.HasPrefix(path, "/static/videos/data/") {
 			filename := filepath.Base(path)
@@ -34,13 +23,8 @@ func CountViewMiddleware() gin.HandlerFunc {
 				c.Next()
 				return
 			}
-			// userViewKey := "user:" + strconv.Itoa(int(id)) + ":" + vid
-			// if global.Rdb.Exists(global.Ctx, userViewKey).Val() > 0 {
-			// 	c.Next()
-			// 	return
-			// }
 			ipViewKey := "ip:" + c.ClientIP() + ":" + vid
-			if global.Rdb.Exists(global.Ctx, ipViewKey).Val() > 0 {
+			if global.Rdb.Exists(global.Ctx, ipViewKey).Val() > 0 { 
 				c.Next()
 				return
 			}
@@ -49,8 +33,7 @@ func CountViewMiddleware() gin.HandlerFunc {
 				c.JSON(http.StatusOK, utils.Error(http.StatusInternalServerError, "服务器内部错误"))
 				c.Abort()
 			}
-			// global.Rdb.Set(global.Ctx, userViewKey, 1, 1*time.Hour)
-			global.Rdb.Set(global.Ctx, ipViewKey, 1, 5*time.Minute)
+			global.Rdb.Set(global.Ctx, ipViewKey, 1, 1*time.Hour)
 		}
 		c.Next()
 	}

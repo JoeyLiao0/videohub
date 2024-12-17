@@ -57,11 +57,11 @@ func (us *User) Login(request *user.LoginRequest) *utils.Response {
 		return utils.Error(http.StatusInternalServerError, "服务器内部错误")
 	}
 
-	key := fmt.Sprintf("user:%d:is_online", result.ID)
-	global.Rdb.Set(global.Ctx, key, true, 1*time.Minute)
-
-	key = "login_users"
-	global.Rdb.SAdd(global.Ctx, key, result.ID)
+	if result.Role == 0 {
+		key := fmt.Sprintf("user:%d:is_online", result.ID)
+		global.Rdb.Set(global.Ctx, key, 1, 1*time.Minute)
+		global.Rdb.SAdd(global.Ctx, "login_users", result.ID)
+	}
 
 	logrus.Debug("Login successfully")
 	return utils.Ok(http.StatusOK, user.LoginResponse{

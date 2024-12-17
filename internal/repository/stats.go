@@ -5,6 +5,7 @@ import (
 	"videohub/global"
 	"videohub/internal/model"
 
+	"github.com/redis/go-redis/v9"
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
@@ -28,24 +29,63 @@ func WriteStats(db *gorm.DB) {
 		logrus.Error(err.Error())
 		return
 	}
-
+	if err := global.Rdb.Del(global.Ctx, "login_users").Err(); err != nil {
+		logrus.Error(err.Error())
+		return
+	}
+	
 	var newAccounts int64
-	if err := db.Model(&model.User{}).Where("created_at BETWEEN ? AND ?", start, end).Count(&newAccounts).Error; err != nil {
+	if err := db.Model(&model.User{}).Where("created_at BETWEEN ? AND ? AND role = 0", start, end).Count(&newAccounts).Error; err != nil {
 		logrus.Error(err.Error())
 		return
 	}
 
-	var videoViews int64
-	if err := db.Model(&model.Video{}).Where("created_at BETWEEN ? AND ?", start, end).Count(&videoViews).Error; err != nil {
+	var currentViews int64
+	var cursor uint64
+	pattern := "video:*:views"
+
+	for {
+		keys, nextCursor, err := global.Rdb.Scan(global.Ctx, cursor, pattern, 100).Result()
+		if err != nil {
+			logrus.Error(err.Error())
+			return
+		}
+
+		for _, key := range keys {
+			viewCount, err := global.Rdb.Get(global.Ctx, key).Int64()
+			if err != nil {
+				logrus.Error(err.Error())
+				return
+			}
+			currentViews += viewCount
+		}
+
+		cursor = nextCursor
+		if cursor == 0 {
+			break
+		}
+	}
+
+	lastViews, err := global.Rdb.Get(global.Ctx, "video:total_views").Int64()
+	if err == redis.Nil {
+		lastViews = 0
+	} else if err != nil {
 		logrus.Error(err.Error())
 		return
 	}
 
+	key := "video:total_views"
+	if err := global.Rdb.Set(global.Ctx, key, currentViews, 0).Err(); err != nil {
+		logrus.Error(err.Error())
+		return
+	}
+
+	newViews := currentViews - lastViews
 	stat := model.Stats{
-		LoginCount:  int(loginCount),
-		NewAccounts: int(newAccounts),
-		VideoViews:  int(videoViews),
-		Date:        time.Now(),
+		LoginCount:    int(loginCount),
+		NewAccounts:   int(newAccounts),
+		NewVideoViews: int(newViews),
+		Date:          time.Now(),
 	}
 	if err := db.Model(&model.Stats{}).Create(&stat).Error; err != nil {
 		logrus.Error(err.Error())

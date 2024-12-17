@@ -34,7 +34,7 @@ func (vc *VideoController) GetVideos(c *gin.Context) {
 	// 获取 Query 参数
 	// 或者使用 c.DefaultQuery()
 	var request video.GetVideosRequest
-	if err := c.ShouldBindJSON(&request); err != nil { // 输入为json
+	if err := c.ShouldBind(&request); err != nil { // 输入为json
 		logrus.Debug(err.Error())
 		c.JSON(http.StatusOK, utils.Error(http.StatusBadRequest, "请求无效"))
 		return
