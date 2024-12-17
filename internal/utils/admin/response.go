@@ -17,3 +17,23 @@ type GetHistoricalDataResponse struct {
 	Area []Item `json:"area"`
 	Bar  []Item `json:"bar"`
 }
+
+type UserInfo struct {
+	ID        uint   `json:"id" binding:"required"`
+	Username  string `json:"name" binding:"required"`
+	Email     string `json:"email" binding:"required"`
+	Avatar    string `json:"avatar" binding:"required"`
+	Status    int8   `json:"status" binding:"required"`
+	CreatedAt int64  `json:"time" binding:"required"`
+}
+
+type PageInfo struct {
+	Page       int `json:"page"`
+	Limit      int `json:"limit"`
+	TotalPages int `json:"total_pages"`
+}
+
+type ListUsersResponse struct {
+	Users []UserInfo `json:"users"`
+	Pages PageInfo   `json:"pages"`
+}

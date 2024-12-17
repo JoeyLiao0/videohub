@@ -12,7 +12,7 @@ type GetVideosRequest struct {
 
 type UpdateVideoStatusRequest struct {
 	VideoID   string `json:"vid" binding:"required"`
-	NewStatus int8   `json:"new_status" binding:"required"`
+	NewStatus *int8   `json:"new_status" binding:"required"`
 }
 
 type GetCommentsRequest struct {

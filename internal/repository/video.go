@@ -45,7 +45,9 @@ func (vr *Video) UpdateVideoStatus(id string, newStatus int8) error {
 // 查询视频列表
 func (vr *Video) FindVideos(like string, status, page, limit int, fields, result interface{}) error {
 	query := vr.DB.Model(&model.Video{})
-	query = query.Where("videos.video_status = ?", status)
+	if status != -1 {
+		query = query.Where("videos.video_status = ?", status)
+	}
 
 	// 标题模糊搜索
 	if like != "" {

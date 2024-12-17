@@ -37,3 +37,17 @@ func (ur *User) Update(conditions interface{}, fields interface{}, values interf
 func (ur *User) Delete(conditions interface{}) error {
 	return ur.DB.Where(conditions).Delete(&model.User{}).Error
 }
+
+// SearchWithOrder 支持排序的分页查询
+func (ur *User) SearchWithOrder(conditions interface{}, offset, limit int, order, like string, fields []string, result interface{}) error {
+	query := ur.DB.Model(&model.User{})
+	if like != "" {
+		query = query.Where("username LIKE ?", "%"+like+"%")
+	}
+	return query.Where(conditions).
+		Select(fields).
+		Order(order).
+		Offset(offset).
+		Limit(limit).
+		Find(result).Error
+}

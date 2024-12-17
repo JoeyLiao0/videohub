@@ -17,6 +17,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// 验证器部分应该可以重写一下, 采用 gin 框架的 binding 直接注册验证器
 func main() {
 	global.Ctx = context.Background()
 	config.InitConfig()

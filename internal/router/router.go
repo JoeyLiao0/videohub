@@ -34,12 +34,22 @@ func InitRouter() *gin.Engine {
 	userVideoService := service.NewUserVideo(videoRepo)
 	userCollectionService := service.NewUserCollection(collectionRepo)
 	likeService := service.NewLike(videoRepo, likeRepo)
-	dataService := service.NewStats(statsRepo)
+	videoListService := service.NewVideoList(userRepo, videoRepo)
+	videoUpdateService := service.NewVideoUpdateStatus(videoRepo)
+	statsService := service.NewStats(statsRepo)
 
 	//3、service 到 controller
 	userController := controller.NewUserController(userAvatarService, userListService, userService, userVideoService, userCollectionService)
 	videoController := controller.NewVideoController(videoUploadService, VideoUpdateStatusService, videoSearchService, likeService, commentService)
-	adminController := controller.NewAdminController(userAvatarService, userListService, userService, dataService)
+	adminController := controller.NewAdminController(
+		userAvatarService,
+		userListService,
+		userService,
+		videoListService,
+		videoUpdateService,
+		userVideoService,
+		statsService,
+	)
 
 	// r := gin.Default()
 	r := gin.New()
@@ -85,6 +95,8 @@ func InitRouter() *gin.Engine {
 			adminRouter.PUT("/videos", adminController.UpdateVideo)
 			// 视频删除
 			adminRouter.DELETE("/videos", adminController.DeleteVideo)
+			// 管理员密码修改
+			adminRouter.PUT("/password", userController.UpdatePassword)
 
 			// 获取实时数据
 			adminRouter.GET("/real_time_data", adminController.GetRealTimeData)

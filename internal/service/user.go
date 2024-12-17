@@ -10,6 +10,7 @@ import (
 	"videohub/internal/model"
 	"videohub/internal/repository"
 	"videohub/internal/utils"
+	"videohub/internal/utils/admin"
 	"videohub/internal/utils/user"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -136,7 +137,7 @@ func (us *User) CreateUser(request *user.CreateUserRequest) *utils.Response {
 	newUser.Salt = utils.GenerateSalt(16)
 	newUser.Password = utils.HashPassword(request.Password, newUser.Salt)
 	newUser.Email = request.Email
-	newUser.Avatar = fmt.Sprintf("%s/%s/%s", config.AppConfig.Static.Base, config.AppConfig.Static.Avatar, "tourist.jpeg")
+	newUser.Avatar = fmt.Sprintf("%s%s%s", config.AppConfig.Static.Base, config.AppConfig.Static.Avatar, "/tourist.jpeg")
 
 	if err := us.userRepo.Create(&newUser); err != nil {
 		logrus.Error(err.Error())
@@ -243,4 +244,45 @@ func (us *User) SendEmailVerification(request *user.SendEmailVerificationRequest
 	logrus.Debug("Email verification sent successfully")
 	// return utils.Success(http.StatusOK)
 	return utils.Ok(http.StatusOK, map[string]string{"code": code})
+}
+
+func (us *User) CreateUserByAdmin(request *admin.CreateUserRequest) *utils.Response {
+	if count, err := us.userRepo.Count(map[string]interface{}{"username": request.Username}); err != nil || count != 0 {
+		logrus.Debug("username exists")
+		return utils.Error(http.StatusBadRequest, "用户名已被注册")
+	}
+
+	if count, err := us.userRepo.Count(map[string]interface{}{"email": request.Email}); err != nil || count != 0 {
+		logrus.Debug("email exists")
+		return utils.Error(http.StatusBadRequest, "邮箱已被注册")
+	}
+
+	var newUser model.User
+	newUser.Username = request.Username
+	newUser.Salt = utils.GenerateSalt(16)
+	newUser.Password = utils.HashPassword(request.Password, newUser.Salt)
+	newUser.Email = request.Email
+	if request.Avatar == "" {
+		newUser.Avatar = fmt.Sprintf("%s%s%s", config.AppConfig.Static.Base, config.AppConfig.Static.Avatar, "/tourist.jpeg")
+	} else {
+		newUser.Avatar = request.Avatar
+	}
+	
+	if err := us.userRepo.Create(&newUser); err != nil {
+		logrus.Error(err.Error())
+		return utils.Error(http.StatusInternalServerError, "服务器内部错误")
+	}
+
+	logrus.Debugf("User %s created successfully", newUser.Username)
+	return utils.Success(http.StatusOK)
+}
+
+func (us *User) UpdateUserByAdmin(request *admin.UpdateUserRequest) *utils.Response{
+	if err := us.userRepo.Update(map[string]interface{}{"id": request.ID}, []string{"status"}, map[string]interface{}{"status": request.Status}); err != nil {
+		logrus.Error(err.Error())
+		return utils.Error(http.StatusInternalServerError, "服务器内部错误")
+	}
+
+	logrus.Debug("User updated successfully")
+	return utils.Success(http.StatusOK)
 }
