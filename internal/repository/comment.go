@@ -5,6 +5,7 @@ import (
 	"videohub/internal/model"
 	"videohub/internal/utils/video"
 
+	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
 
@@ -31,13 +32,27 @@ func (r *Comment) Join(conditions interface{}, limit int, joins string, fields, 
 
 // GetCommentsByVideo获取指定视频的评论列表
 func (r *Comment) GetCommentsByVideo(videoID string, uid uint) ([]video.CommentsOutside, error) {
-	var parentComments []model.Comment
+	var parentComments []video.CommentInfo
 	// 查询父评论（ParentID == -1 且 Status == 0）
-	err := r.DB.Where("video_id = ? AND status = 0 AND parent_id = -1", videoID).Find(&parentComments).Error
+	err := r.DB.Model(&model.Comment{}).
+		Select("id, created_at, user_id, comment_content, video_id, parent_id, likes, status").
+		Where("video_id = ? AND status = 0 AND parent_id = -1", videoID).
+		Find(&parentComments).Error
 	if err != nil {
 		return nil, err
 	}
-
+	for i := range parentComments {
+		// 手动查询填充username和avatar
+		var user model.User
+		if err := r.DB.Debug().Model(&model.User{}).
+			Where("id = ?", parentComments[i].UserID). // 使用 uploader_id
+			First(&user).Error; err != nil {
+			logrus.Warnf("User not found for uploader_id: %d", parentComments[i].UserID)
+		} else {
+			parentComments[i].Username = user.Username
+			parentComments[i].Avatar = user.Avatar
+		}
+	}
 	var commentsOutside []video.CommentsOutside
 	for _, parentComment := range parentComments {
 		var isLiked bool
@@ -65,7 +80,7 @@ func (r *Comment) GetCommentsByVideo(videoID string, uid uint) ([]video.Comments
 func (r *Comment) FillPerCommentsReply(commentsOutside []video.CommentsOutside, uid uint) ([]video.CommentsOutside, error) {
 	for i, comment := range commentsOutside {
 		// 使用递归函数填充所有子评论
-		replies, err := r.getRepliesRecursive(comment.Comments.ID, comment.Comments.UserID, uid)
+		replies, err := r.getRepliesRecursive(comment.Comments.ID, uint(comment.Comments.UserID), uid)
 		if err != nil {
 			return nil, err
 		}
@@ -79,11 +94,27 @@ func (r *Comment) FillPerCommentsReply(commentsOutside []video.CommentsOutside, 
 
 // getRepliesRecursive 递归获取子评论，并填充ReplyTo字段
 func (r *Comment) getRepliesRecursive(parentID uint, parentUserID uint, uid uint) ([]video.CommentsInside, error) {
-	var childComments []model.Comment
+	var childComments []video.CommentInfo
 	// 查询直接子评论
-	err := r.DB.Where("parent_id = ? AND status = 0", parentID).Find(&childComments).Error
+	err := r.DB.Model(&model.Comment{}).
+		Select("id, created_at, user_id, comment_content, video_id, parent_id, likes, status").
+		Where("parent_id = ? AND status = 0", parentID).
+		Find(&childComments).Error
 	if err != nil {
 		return nil, err
+	}
+	for i := range childComments {
+		// 手动查询填充 username 和 avatar
+		var user model.User
+		if err := r.DB.Debug().Model(&model.User{}).
+			Where("id = ?", childComments[i].UserID). // 使用 uploader_id
+			First(&user).Error; err != nil {
+			// 如果没有找到用户数据，可以继续，也可以记录日志
+			logrus.Warnf("User not found for uploader_id: %d", childComments[i].UserID)
+		} else {
+			childComments[i].Username = user.Username
+			childComments[i].Avatar = user.Avatar
+		}
 	}
 
 	var replies []video.CommentsInside
@@ -103,7 +134,7 @@ func (r *Comment) getRepliesRecursive(parentID uint, parentUserID uint, uid uint
 		replyToName := r.GetUserName(parentUserID)
 
 		// 递归获取子评论的子评论（孙子评论）
-		grandReplies, err := r.getRepliesRecursive(childComment.ID, childComment.UserID, uid)
+		grandReplies, err := r.getRepliesRecursive(childComment.ID, uint(childComment.UserID), uid)
 		if err != nil {
 			return nil, err
 		}

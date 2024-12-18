@@ -3,7 +3,10 @@ package repository
 import (
 	"videohub/global"
 	"videohub/internal/model"
+	"videohub/internal/utils/video"
 
+	"github.com/redis/go-redis/v9"
+	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
 
@@ -43,23 +46,64 @@ func (vr *Video) UpdateVideoStatus(id string, newStatus int8) error {
 }
 
 // 查询视频列表
-func (vr *Video) FindVideos(like string, status, page, limit int, fields, result interface{}) error {
-	query := vr.DB.Model(&model.Video{})
-	if status != -1 {
-		query = query.Where("videos.video_status = ?", status)
+func (vr *Video) GetVideos(like string, status, page, limit int) ([]video.VideoInfo, error) {
+	var videoInfos []video.VideoInfo
+
+	// 查询字段
+	fields := []string{
+		"videos.upload_id",
+		"videos.created_at",
+		"videos.title",
+		"videos.description",
+		"videos.cover_path",
+		"videos.video_path",
+		"videos.video_status",
+		"videos.likes",
+		"videos.favorites",
+		"videos.comments",
+		"videos.uploader_id",
 	}
+
+	// 构建查询
+	offset := (page - 1) * limit
+	query := vr.DB.Debug().Model(&model.Video{}).
+		Select(fields).
+		Where("videos.video_status = ?", status).
+		Offset(offset).
+		Limit(limit) // 偏移分页
 
 	// 标题模糊搜索
 	if like != "" {
 		query = query.Where("videos.title LIKE ?", "%"+like+"%")
 	}
 
-	// 计算偏移量
-	offset := (page - 1) * limit
-	// 分页查询
-	err := query.Offset(offset).Limit(limit).Select(fields).Joins("left join users on videos.uploader_id = users.id").Find(result).Error
-	if err != nil {
-		return err
+	// 执行查询
+	if err := query.Scan(&videoInfos).Error; err != nil {
+		return nil, err
 	}
-	return nil
+
+	// 填充观看数（从服务层移到这里）
+	for i := range videoInfos {
+		views, err := global.Rdb.Get(global.Ctx, "video:"+videoInfos[i].UploadID+":views").Int()
+		if err == redis.Nil {
+			views = 0
+		} else if err != nil {
+			logrus.Error(err.Error())
+			return nil, err
+		}
+		videoInfos[i].Views = views
+
+		// 手动查询填充username和avatar
+		var user model.User
+		if err := vr.DB.Debug().Model(&model.User{}).
+			Where("id = ?", videoInfos[i].UploaderID). // 使用 uploader_id
+			First(&user).Error; err != nil {
+			logrus.Warnf("User not found for uploader_id: %d", videoInfos[i].UploaderID)
+		} else {
+			videoInfos[i].UploaderName = user.Username
+			videoInfos[i].UploadAvatar = user.Avatar
+		}
+	}
+
+	return videoInfos, nil
 }

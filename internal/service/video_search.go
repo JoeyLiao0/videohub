@@ -2,12 +2,10 @@ package service
 
 import (
 	"net/http"
-	"videohub/global"
 	"videohub/internal/repository"
 	"videohub/internal/utils"
 	"videohub/internal/utils/video"
 
-	"github.com/redis/go-redis/v9"
 	"github.com/sirupsen/logrus"
 )
 
@@ -25,34 +23,26 @@ func NewVideoSearch(vr *repository.Video, lr *repository.Like) *VideoSearch {
 // 获取视频列表
 func (vs *VideoSearch) GetVideos(request *video.GetVideosRequest) *utils.Response {
 	var response video.GetVideosResponse
-	fields := []string{"upload_id", "created_at", "title", "description", "cover_path", "video_path", "video_status", "likes", "favorites", "comments"}
-	for i, field := range fields {
-		fields[i] = "videos." + field
-	}
-	fields = append(fields, "users.username as uploader_name")
-	if err := vs.videoRepo.FindVideos(request.Like, *request.Status, request.Page, request.Limit, fields, &response.Videos); err != nil {
+
+	// 从数据层获取视频信息
+	videos, err := vs.videoRepo.GetVideos(request.Like, *request.Status, request.Page, request.Limit)
+	if err != nil {
 		logrus.Error(err.Error())
-		return utils.Error(http.StatusInternalServerError, "服务器内部错误")
+		return utils.Error(http.StatusInternalServerError, "获取视频列表失败")
 	}
 
-	for i := range response.Videos {
-		views, err := global.Rdb.Get(global.Ctx, "video:"+response.Videos[i].UploadID+":views").Int()
-		if err == redis.Nil {
-			logrus.Debug("redis: nil")
-			views = 0
-		} else if err != nil {
-			logrus.Debug(err.Error())
-			return utils.Error(http.StatusInternalServerError, "服务器内部错误")
+	// 检查是否点赞
+	for i := range videos {
+		if request.UserID != 0 {
+			isLiked, err := vs.likeRepo.CheckVideoLike(request.UserID, videos[i].UploadID)
+			if err != nil {
+				logrus.Error(err.Error())
+				return utils.Error(http.StatusInternalServerError, "获取视频点赞状态失败")
+			}
+			videos[i].IsLiked = isLiked
 		}
-		response.Videos[i].Views = views
-		// 查询用户是否点赞
-		isLiked, err := vs.likeRepo.CheckVideoLike(request.UserID, response.Videos[i].UploadID)
-		if err != nil {
-			logrus.Debug(err.Error())
-			return utils.Error(http.StatusInternalServerError, "服务器内部错误")
-		}
-		response.Videos[i].IsLiked = isLiked
 	}
 
+	response.Videos = videos
 	return utils.Ok(http.StatusOK, &response)
 }
