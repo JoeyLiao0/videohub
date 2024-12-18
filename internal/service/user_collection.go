@@ -50,6 +50,7 @@ func (uc *UserCollection) GetUserCollections(id uint) *utils.Response {
 }
 
 func (uc *UserCollection) AddUserCollection(userID uint, request *user.AddCollectionsRequest) *utils.Response {
+	// 检查是否已经收藏
 	if count, err := uc.collectionRepo.Count(map[string]interface{}{"user_id": userID, "video_id": request.VideoID}); err != nil || count > 0 {
 		if err != nil {
 			logrus.Error(err.Error())
@@ -64,21 +65,31 @@ func (uc *UserCollection) AddUserCollection(userID uint, request *user.AddCollec
 		UserID:  userID,
 		VideoID: request.VideoID,
 	}
+	// 在Collections表中插入键值对
 	if err := uc.collectionRepo.Create(collection); err != nil {
 		logrus.Error(err.Error())
 		return utils.Error(http.StatusInternalServerError, "服务器内部错误")
 	}
-
+	// 在Videos表中累加favorites词条
+	err := uc.collectionRepo.IncrementVideoCollects(collection.VideoID)
+	if err != nil {
+		return utils.Error(500, "更新视频收藏数失败")
+	}
 	logrus.Debug("Add user collection successfully")
-	return utils.Ok(http.StatusOK, nil)
+	return utils.Ok(http.StatusOK, "成功收藏")
 }
 
 func (uc *UserCollection) DeleteUserCollection(userID uint, request *user.DeleteCollectionsRequest) *utils.Response {
+	// 删除Collections中的键值对
 	if err := uc.collectionRepo.Delete(map[string]interface{}{"user_id": userID, "video_id": request.VideoID}); err != nil {
 		logrus.Error(err.Error())
 		return utils.Error(http.StatusInternalServerError, "服务器内部错误")
 	}
-
+	// 在Videos中减少favorites词条
+	err := uc.collectionRepo.DecrementVideoCollects(request.VideoID)
+	if err != nil {
+		return utils.Error(500, "更新视频收藏数失败")
+	}
 	logrus.Debug("Delete user collection successfully")
-	return utils.Ok(http.StatusOK, nil)
+	return utils.Ok(http.StatusOK, "成功移除收藏")
 }

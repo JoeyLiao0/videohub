@@ -36,3 +36,26 @@ func (r *Collection) GetUserCollections(conditions interface{}, limit int, joins
 	}
 	return query.Find(result).Error
 }
+
+// IncrementVideoCollects增加视频收藏数
+func (co *Collection) IncrementVideoCollects(videoID string) error {
+	return co.DB.Model(&model.Video{}).
+		Where("upload_id = ?", videoID).
+		Update("favorites", gorm.Expr("favorites + ?", 1)).Error
+}
+
+// DecrementVideoCollects减少视频收藏数
+func (co *Collection) DecrementVideoCollects(videoID string) error {
+	return co.DB.Model(&model.Video{}).
+		Where("upload_id = ?", videoID).
+		Update("favorites", gorm.Expr("favorites - ?", 1)).Error
+}
+
+// CheckVideoCollect检查是否已经收藏
+func (co *Collection) CheckVideoCollect(userID uint, videoID string) (bool, error) {
+	var count int64
+	err := co.DB.Model(&model.Collection{}).
+		Where("user_id = ? AND video_id = ?", userID, videoID).
+		Count(&count).Error
+	return count > 0, err
+}

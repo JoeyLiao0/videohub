@@ -1,9 +1,12 @@
 package service
 
 import (
+	"net/http"
 	"videohub/internal/repository"
 	"videohub/internal/utils"
 	"videohub/internal/utils/video"
+
+	"github.com/sirupsen/logrus"
 )
 
 type Like struct {
@@ -20,7 +23,18 @@ func NewLike(vr *repository.Video, lr *repository.Like) *Like {
 
 // LikeVideo 点赞视频
 func (li *Like) LikeVideo(request *video.LikeVideoRequest) *utils.Response {
-	err := li.likeRepo.AddVideoLikeRecord(request.UserID, request.VideoID)
+	// 检查是否已经点赞
+	isLiked, err := li.likeRepo.CheckVideoLike(request.UserID, request.VideoID)
+	if isLiked {
+		if err != nil {
+			logrus.Error(err.Error())
+			return utils.Error(http.StatusInternalServerError, "服务器内部错误")
+		} else {
+			logrus.Debug("Video has been liked")
+			return utils.Error(http.StatusBadRequest, "视频已点赞")
+		}
+	}
+	err = li.likeRepo.AddVideoLikeRecord(request.UserID, request.VideoID)
 	if err != nil {
 		return utils.Error(500, "添加点赞记录失败")
 	}
@@ -46,7 +60,18 @@ func (li *Like) UnlikeVideo(request *video.LikeVideoRequest) *utils.Response {
 
 // LikeComment 点赞评论
 func (li *Like) LikeComment(request *video.LikeCommentRequest) *utils.Response {
-	err := li.likeRepo.AddCommentLikeRecord(request.UserID, request.CommentID)
+	// 检查是否已经点赞
+	isLiked, err := li.likeRepo.CheckCommentLike(request.UserID, request.CommentID)
+	if isLiked {
+		if err != nil {
+			logrus.Error(err.Error())
+			return utils.Error(http.StatusInternalServerError, "服务器内部错误")
+		} else {
+			logrus.Debug("Comment has been liked")
+			return utils.Error(http.StatusBadRequest, "评论已点赞")
+		}
+	}
+	err = li.likeRepo.AddCommentLikeRecord(request.UserID, request.CommentID)
 	if err != nil {
 		return utils.Error(500, "添加点赞记录失败")
 	}

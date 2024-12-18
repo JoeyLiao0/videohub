@@ -11,13 +11,14 @@ import (
 
 // VideoService 提供视频业务逻辑
 type VideoSearch struct {
-	videoRepo *repository.Video
-	likeRepo  *repository.Like
+	videoRepo      *repository.Video
+	likeRepo       *repository.Like
+	collectionRepo *repository.Collection
 }
 
 // VideoService 实例
-func NewVideoSearch(vr *repository.Video, lr *repository.Like) *VideoSearch {
-	return &VideoSearch{videoRepo: vr, likeRepo: lr}
+func NewVideoSearch(vr *repository.Video, lr *repository.Like, cr *repository.Collection) *VideoSearch {
+	return &VideoSearch{videoRepo: vr, likeRepo: lr, collectionRepo: cr}
 }
 
 // 获取视频列表
@@ -31,7 +32,7 @@ func (vs *VideoSearch) GetVideos(request *video.GetVideosRequest) *utils.Respons
 		return utils.Error(http.StatusInternalServerError, "获取视频列表失败")
 	}
 
-	// 检查是否点赞
+	// 检查是否点赞、收藏
 	for i := range videos {
 		if request.UserID != 0 {
 			isLiked, err := vs.likeRepo.CheckVideoLike(request.UserID, videos[i].UploadID)
@@ -40,6 +41,12 @@ func (vs *VideoSearch) GetVideos(request *video.GetVideosRequest) *utils.Respons
 				return utils.Error(http.StatusInternalServerError, "获取视频点赞状态失败")
 			}
 			videos[i].IsLiked = isLiked
+			isCollected, err := vs.collectionRepo.CheckVideoCollect(request.UserID, videos[i].UploadID)
+			if err != nil {
+				logrus.Error(err.Error())
+				return utils.Error(http.StatusInternalServerError, "获取视频收藏状态失败")
+			}
+			videos[i].IsCollected = isCollected
 		}
 	}
 

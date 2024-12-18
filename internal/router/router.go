@@ -29,7 +29,7 @@ func InitRouter() *gin.Engine {
 	userService := service.NewUser(userRepo, collectionRepo, videoRepo)
 	videoUploadService := service.NewVideoUpload(videoRepo)
 	VideoUpdateStatusService := service.NewVideoUpdateStatus(videoRepo)
-	videoSearchService := service.NewVideoSearch(videoRepo, likeRepo)
+	videoSearchService := service.NewVideoSearch(videoRepo, likeRepo, collectionRepo)
 	commentService := service.NewComment(commentRepo, videoRepo)
 	userVideoService := service.NewUserVideo(videoRepo)
 	userCollectionService := service.NewUserCollection(collectionRepo)

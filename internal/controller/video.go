@@ -34,7 +34,7 @@ func (vc *VideoController) GetVideos(c *gin.Context) {
 	// 获取 Query 参数
 	// 或者使用 c.DefaultQuery()
 	var request video.GetVideosRequest
-	if err := c.ShouldBind(&request); err != nil { // 输入为json
+	if err := c.ShouldBind(&request); err != nil {
 		logrus.Debug(err.Error())
 		c.JSON(http.StatusOK, utils.Error(http.StatusBadRequest, "请求无效"))
 		return
@@ -104,7 +104,7 @@ func (vc *VideoController) LikeVideo(c *gin.Context) {
 
 	// 调用 LikeVideo 方法处理逻辑
 	response := vc.like.LikeVideo(&request)
-	c.JSON(response.StatusCode, response)
+	c.JSON(http.StatusOK, response)
 }
 
 // UnlikeVideo 取消点赞视频
@@ -128,7 +128,7 @@ func (vc *VideoController) UnlikeVideo(c *gin.Context) {
 
 	// 调用 UnlikeVideo 方法处理逻辑
 	response := vc.like.UnlikeVideo(&request)
-	c.JSON(response.StatusCode, response)
+	c.JSON(http.StatusOK, response)
 }
 
 // GetComments 获取视频评论
@@ -184,7 +184,7 @@ func (vc *VideoController) LikeComment(c *gin.Context) {
 	request.UserID = userID
 
 	response := vc.like.LikeComment(&request)
-	c.JSON(response.StatusCode, response)
+	c.JSON(http.StatusOK, response)
 }
 
 // UnlikeComment 取消点赞评论
@@ -201,7 +201,7 @@ func (vc *VideoController) UnlikeComment(c *gin.Context) {
 	logrus.Debug(request)
 
 	response := vc.like.UnlikeComment(&request)
-	c.JSON(response.StatusCode, response)
+	c.JSON(http.StatusOK, response)
 }
 
 // DeleteComment 删除评论
