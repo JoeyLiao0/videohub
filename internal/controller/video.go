@@ -57,6 +57,7 @@ func (vc *VideoController) GetVideos(c *gin.Context) {
 		request.UserID = 0
 	}
 	payload, err := utils.ParseJWT(token, config.AppConfig.JWT.AccessTokenSecret)
+	logrus.Debug(payload)
 	if err != nil {
 		request.UserID = 0
 	} else {
@@ -110,8 +111,7 @@ func (vc *VideoController) LikeVideo(c *gin.Context) {
 // UnlikeVideo 取消点赞视频
 func (vc *VideoController) UnlikeVideo(c *gin.Context) {
 	var request video.LikeVideoRequest
-
-	if err := c.ShouldBindJSON(&request); err != nil {
+	if err := c.ShouldBind(&request); err != nil {
 		c.JSON(http.StatusOK, utils.Error(http.StatusBadRequest, "无效的请求参数"))
 		return
 	}

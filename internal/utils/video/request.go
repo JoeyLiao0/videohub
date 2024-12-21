@@ -50,8 +50,8 @@ type CompleteUploadRequest struct {
 }
 
 type LikeVideoRequest struct {
-	UserID  uint   `json:"uid"`
-	VideoID string `json:"vid"`
+	UserID  uint
+	VideoID string `json:"vid" binding:"required"`
 }
 
 type LikeCommentRequest struct {

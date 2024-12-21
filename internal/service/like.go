@@ -42,7 +42,7 @@ func (li *Like) LikeVideo(request *video.LikeVideoRequest) *utils.Response {
 	if err != nil {
 		return utils.Error(500, "更新视频点赞数失败")
 	}
-	return utils.Ok(200, "视频点赞成功")
+	return utils.Success(200)
 }
 
 // UnlikeVideo 取消点赞视频
@@ -92,5 +92,5 @@ func (li *Like) UnlikeComment(request *video.LikeCommentRequest) *utils.Response
 	if err != nil {
 		return utils.Error(500, "更新评论点赞数失败")
 	}
-	return utils.Ok(200, "评论取消点赞成功")
+	return utils.Success(200)
 }

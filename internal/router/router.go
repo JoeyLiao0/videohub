@@ -149,12 +149,12 @@ func InitRouter() *gin.Engine {
 
 		videoRouter.Use(middleware.AuthMiddleware(0))
 		{
+			// 更新视频状态
+			videoRouter.PUT("", videoController.UpdateVideoStatus)
 			// 视频点赞
 			videoRouter.POST("/likes", videoController.LikeVideo)
 			// 视频取消点赞
 			videoRouter.DELETE("/likes", videoController.UnlikeVideo)
-			// 更新视频状态
-			videoRouter.PUT("", videoController.UpdateVideoStatus)
 			// 新增视频评论
 			videoRouter.POST("/comments", videoController.AddComment)
 			// 删除评论
