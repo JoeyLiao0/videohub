@@ -66,7 +66,7 @@ func (vr *Video) GetVideos(like string, status, page, limit int) ([]video.VideoI
 
 	// 构建查询
 	offset := (page - 1) * limit
-	query := vr.DB.Debug().Model(&model.Video{}).
+	query := vr.DB.Model(&model.Video{}).
 		Select(fields).
 		Where("videos.video_status = ?", status).
 		Offset(offset).
@@ -76,7 +76,6 @@ func (vr *Video) GetVideos(like string, status, page, limit int) ([]video.VideoI
 	if like != "" {
 		query = query.Where("videos.title LIKE ?", "%"+like+"%")
 	}
-
 	// 执行查询
 	if err := query.Scan(&videoInfos).Error; err != nil {
 		return nil, err
@@ -95,7 +94,7 @@ func (vr *Video) GetVideos(like string, status, page, limit int) ([]video.VideoI
 
 		// 手动查询填充username和avatar
 		var user model.User
-		if err := vr.DB.Debug().Model(&model.User{}).
+		if err := vr.DB.Model(&model.User{}).
 			Where("id = ?", videoInfos[i].UploaderID). // 使用 uploader_id
 			First(&user).Error; err != nil {
 			logrus.Warnf("User not found for uploader_id: %d", videoInfos[i].UploaderID)

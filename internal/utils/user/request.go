@@ -18,7 +18,7 @@ type CreateUserRequest struct {
 }
 
 type UpdateUserRequest struct {
-	Username string `json:"username"`
+	Username string `json:"name"`
 	Email    string `json:"email" validate:"email"`
 	Code     string `json:"code"`
 }
@@ -42,9 +42,9 @@ type DeleteVideoRequest struct {
 }
 
 type AddCollectionsRequest struct {
-	VideoID string `json:"video_id" binding:"required"`
+	VideoID string `json:"vid" binding:"required"`
 }
 
 type DeleteCollectionsRequest struct {
-	VideoID string `json:"video_id" binding:"required"`
+	VideoID string `form:"vid" binding:"required"`
 }

@@ -3,25 +3,25 @@ package video
 import "mime/multipart"
 
 type GetVideosRequest struct {
-	Status *int   `json:"status"` // 0-正常 1-审核 2-审核未通过 3-封禁
-	Like   string `json:"like"`
-	Page   int    `json:"page"`
-	Limit  int    `json:"limit"`
-	UserID uint   `json:"-"`
+	Status *int   `form:"status"` // 0-正常 1-审核 2-审核未通过 3-封禁
+	Like   string `form:"like"`
+	Page   int    `form:"page"`
+	Limit  int    `form:"limit"`
+	UserID uint   `form:"-"`
 }
 
 type UpdateVideoStatusRequest struct {
 	VideoID   string `json:"vid" binding:"required"`
-	NewStatus *int8   `json:"new_status" binding:"required"`
+	NewStatus *int8  `json:"new_status" binding:"required"`
 }
 
 type GetCommentsRequest struct {
-	VideoID string `json:"vid" binding:"required"`
+	VideoID string `form:"vid" binding:"required"`
 	UserID  uint   // REMOVE required
 }
 
 type AddCommentRequest struct {
-	UserID          uint   `json:"user_id" binding:"required"`
+	UserID          uint
 	CommentContent  string `json:"comment" binding:"required"`
 	FatherCommentID int    `json:"father_comment_id" binding:"required"`
 	VideoID         string `json:"vid" binding:"required"`
@@ -54,8 +54,19 @@ type LikeVideoRequest struct {
 	VideoID string `json:"vid" binding:"required"`
 }
 
+type UnLikeVideoRequest struct {
+	UserID  uint
+	VideoID string `form:"vid" binding:"required"`
+}
+
 type LikeCommentRequest struct {
 	UserID    uint
 	VideoID   string `json:"vid"`
 	CommentID uint   `json:"cid"`
+}
+
+type UnLikeCommentRequest struct {
+	UserID    uint
+	VideoID   string `form:"vid"`
+	CommentID uint   `form:"cid"`
 }

@@ -46,7 +46,7 @@ func (li *Like) LikeVideo(request *video.LikeVideoRequest) *utils.Response {
 }
 
 // UnlikeVideo 取消点赞视频
-func (li *Like) UnlikeVideo(request *video.LikeVideoRequest) *utils.Response {
+func (li *Like) UnlikeVideo(request *video.UnLikeVideoRequest) *utils.Response {
 	err := li.likeRepo.RemoveVideoLikeRecord(request.UserID, request.VideoID)
 	if err != nil {
 		return utils.Error(500, "删除点赞记录失败")
@@ -83,7 +83,7 @@ func (li *Like) LikeComment(request *video.LikeCommentRequest) *utils.Response {
 }
 
 // UnlikeComment 取消点赞评论
-func (li *Like) UnlikeComment(request *video.LikeCommentRequest) *utils.Response {
+func (li *Like) UnlikeComment(request *video.UnLikeCommentRequest) *utils.Response {
 	err := li.likeRepo.RemoveCommentLikeRecord(request.UserID, request.CommentID)
 	if err != nil {
 		return utils.Error(500, "删除点赞记录失败")

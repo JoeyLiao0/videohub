@@ -19,8 +19,10 @@ func NewStats(db *gorm.DB) *Stats {
 }
 
 func WriteStats(db *gorm.DB) {
-	endOfDay := time.Now().Truncate(24 * time.Hour)
-	startOfDay := endOfDay.Add(-24 * time.Hour)
+	// endOfDay := time.Now().Truncate(24 * time.Hour)
+	// startOfDay := endOfDay.Add(-24 * time.Hour)
+	startOfDay := time.Now().Truncate(24 * time.Hour)
+	endOfDay := startOfDay.Add(24 * time.Hour)
 	start := startOfDay.UnixMilli()
 	end := endOfDay.UnixMilli()
 

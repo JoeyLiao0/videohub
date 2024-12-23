@@ -44,7 +44,7 @@ func (ur *User) SearchWithOrder(conditions interface{}, offset, limit int, order
 	if like != "" {
 		query = query.Where("username LIKE ?", "%"+like+"%")
 	}
-	return query.Where(conditions).
+	return query.Debug().Where(conditions).
 		Select(fields).
 		Order(order).
 		Offset(offset).

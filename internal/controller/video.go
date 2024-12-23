@@ -110,7 +110,7 @@ func (vc *VideoController) LikeVideo(c *gin.Context) {
 
 // UnlikeVideo 取消点赞视频
 func (vc *VideoController) UnlikeVideo(c *gin.Context) {
-	var request video.LikeVideoRequest
+	var request video.UnLikeVideoRequest
 	if err := c.ShouldBind(&request); err != nil {
 		c.JSON(http.StatusOK, utils.Error(http.StatusBadRequest, "无效的请求参数"))
 		return
@@ -135,7 +135,7 @@ func (vc *VideoController) UnlikeVideo(c *gin.Context) {
 func (vc *VideoController) GetComments(c *gin.Context) {
 	var request video.GetCommentsRequest
 	// 获取视频ID
-	if err := c.ShouldBindJSON(&request); err != nil {
+	if err := c.ShouldBind(&request); err != nil {
 		logrus.Debug(err.Error())
 		c.JSON(http.StatusOK, utils.Error(http.StatusBadRequest, "无效的请求参数"))
 		return
@@ -166,6 +166,9 @@ func (vc *VideoController) AddComment(c *gin.Context) {
 		return
 	}
 
+	userID, _ := GetUserID(c)
+	request.UserID = userID
+
 	response := vc.comment.CreateComment(&request)
 	c.JSON(http.StatusOK, response)
 }
@@ -189,9 +192,9 @@ func (vc *VideoController) LikeComment(c *gin.Context) {
 
 // UnlikeComment 取消点赞评论
 func (vc *VideoController) UnlikeComment(c *gin.Context) {
-	var request video.LikeCommentRequest
+	var request video.UnLikeCommentRequest
 
-	if err := c.ShouldBindJSON(&request); err != nil {
+	if err := c.ShouldBind(&request); err != nil {
 		c.JSON(http.StatusOK, utils.Error(http.StatusBadRequest, "无效的请求参数"))
 		return
 	}

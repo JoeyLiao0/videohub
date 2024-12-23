@@ -25,7 +25,9 @@ func (ul *UserList) GetUsers(request *admin.ListUsersRequest) *utils.Response {
 	// 构建查询条件
 	conditions := make(map[string]interface{})
 	conditions["role"] = 0
-	conditions["status"] = *request.Status
+	if *request.Status != -1 {
+		conditions["status"] = *request.Status
+	}
 	if request.ID > 0 {
 		conditions["id"] = request.ID
 	}

@@ -111,6 +111,7 @@ func (vus *VideoUpload) HandleVideoComplete(id uint, request *video.CompleteUplo
 		CoverPath:   utils.GetURLPath(config.AppConfig.Static.Cover, fmt.Sprintf("%s%s", request.UploadID, coverExt)),
 		VideoPath:   utils.GetURLPath(config.AppConfig.Static.Video, fmt.Sprintf("%s%s", request.UploadID, filepath.Ext(chunks[0]))),
 		UploaderID:  id,
+		VideoStatus: 1,
 	}
 
 	// 保存完整视频路径和封面路径

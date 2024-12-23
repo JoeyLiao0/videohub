@@ -279,7 +279,7 @@ func (uc *UserController) DeleteCollection(c *gin.Context) {
 		return
 	}
 	var request user.DeleteCollectionsRequest
-	if err := c.ShouldBindJSON(&request); err != nil {
+	if err := c.ShouldBind(&request); err != nil {
 		logrus.Debug(err.Error())
 		c.JSON(http.StatusOK, utils.Error(http.StatusBadRequest, "请求无效"))
 		return

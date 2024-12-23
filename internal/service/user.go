@@ -173,7 +173,6 @@ func (us *User) UpdateUser(id uint, fileds interface{}, request *user.UpdateUser
 			return utils.Error(http.StatusBadRequest, "用户名已被注册")
 		}
 	}
-
 	if err := us.userRepo.Update(map[string]interface{}{"id": id}, fileds, request); err != nil {
 		logrus.Error(err.Error())
 		return utils.Error(http.StatusInternalServerError, "服务器内部错误")
