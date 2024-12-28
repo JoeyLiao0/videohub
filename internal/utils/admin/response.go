@@ -1,5 +1,7 @@
 package admin
 
+import "videohub/internal/utils/video"
+
 type GetRealTimeDataResponse struct {
 	CPUPercent float64 `json:"cpu_percent"`
 	MemTotal   float64 `json:"memory_total"`
@@ -36,4 +38,9 @@ type PageInfo struct {
 type ListUsersResponse struct {
 	Users []UserInfo `json:"users"`
 	Pages PageInfo   `json:"pages"`
+}
+
+type VideoInfo struct {
+	Videos []video.VideoInfo `json:"videos"`
+	Pages  PageInfo          `json:"pages"`
 }

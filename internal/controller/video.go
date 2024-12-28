@@ -57,7 +57,7 @@ func (vc *VideoController) GetVideos(c *gin.Context) {
 		request.UserID = 0
 	}
 	payload, err := utils.ParseJWT(token, config.AppConfig.JWT.AccessTokenSecret)
-	logrus.Debug(payload)
+
 	if err != nil {
 		request.UserID = 0
 	} else {

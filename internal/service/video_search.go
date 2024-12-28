@@ -1,9 +1,11 @@
 package service
 
 import (
+	"math"
 	"net/http"
 	"videohub/internal/repository"
 	"videohub/internal/utils"
+	"videohub/internal/utils/admin"
 	"videohub/internal/utils/video"
 
 	"github.com/sirupsen/logrus"
@@ -23,9 +25,14 @@ func NewVideoSearch(vr *repository.Video, lr *repository.Like, cr *repository.Co
 
 // 获取视频列表
 func (vs *VideoSearch) GetVideos(request *video.GetVideosRequest) *utils.Response {
-	var response video.GetVideosResponse
+	// 计算总记录数
+	total, err := vs.videoRepo.Count(*request.Status, request.Like)
+	if err != nil {
+		logrus.Error(err.Error())
+		return utils.Error(http.StatusInternalServerError, "服务器内部错误")
+	}
+	totalPages := int(math.Ceil(float64(total) / float64(request.Limit)))
 
-	// 从数据层获取视频信息
 	videos, err := vs.videoRepo.GetVideos(request.Like, *request.Status, request.Page, request.Limit)
 	if err != nil {
 		logrus.Error(err.Error())
@@ -50,6 +57,13 @@ func (vs *VideoSearch) GetVideos(request *video.GetVideosRequest) *utils.Respons
 		}
 	}
 
-	response.Videos = videos
+	response := admin.VideoInfo{
+		Videos: videos,
+		Pages: admin.PageInfo{
+			Page:       request.Page,
+			Limit:      request.Limit,
+			TotalPages: totalPages,
+		},
+	}
 	return utils.Ok(http.StatusOK, &response)
 }

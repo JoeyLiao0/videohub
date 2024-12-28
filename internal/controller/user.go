@@ -54,14 +54,14 @@ func (uc *UserController) Login(c *gin.Context) {
 }
 
 // AccessToken 获取访问令牌处理函数，返回访问令牌给前端
-func (uc *UserController) AccessToken(c *gin.Context) {
+func (uc *UserController) AccessToken(c *gin.Context, role int8) {
 	var request user.AccessTokenRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
 		logrus.Debug(err.Error())
 		c.JSON(http.StatusOK, utils.Error(http.StatusBadRequest, "请求无效"))
 		return
 	}
-	response := uc.userService.AccessToken(&request)
+	response := uc.userService.AccessToken(&request, role)
 	c.JSON(http.StatusOK, response)
 }
 

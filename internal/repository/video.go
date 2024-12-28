@@ -22,6 +22,21 @@ func (vr *Video) Search(conditions interface{}, limit int, result interface{}) e
 	return vr.DB.Model(&model.Video{}).Where(conditions).Limit(limit).Find(result).Error
 }
 
+func (vr *Video) Count(status int, like string) (int64, error) {
+	var count int64
+	query := vr.DB.Model(&model.Video{})
+	if status != -1 {
+		query = query.Where("videos.video_status = ?", status)
+	}
+	
+	// 标题模糊搜索
+	if like != "" {
+		query = query.Where("videos.title LIKE ?", "%"+like+"%")
+	}
+	err := query.Count(&count).Error
+	return count, err
+}
+
 func (vr *Video) Select(conditions interface{}, limit int, fields, result interface{}) error {
 	return vr.DB.Model(&model.Video{}).Where(conditions).Limit(limit).Select(fields).Find(result).Error
 }
@@ -68,10 +83,13 @@ func (vr *Video) GetVideos(like string, status, page, limit int) ([]video.VideoI
 	offset := (page - 1) * limit
 	query := vr.DB.Model(&model.Video{}).
 		Select(fields).
-		Where("videos.video_status = ?", status).
 		Offset(offset).
 		Limit(limit) // 偏移分页
 
+	if status != -1 {
+		query = query.Where("videos.video_status = ?", status)
+	}
+	
 	// 标题模糊搜索
 	if like != "" {
 		query = query.Where("videos.title LIKE ?", "%"+like+"%")

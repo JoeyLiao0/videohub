@@ -34,7 +34,7 @@ func InitRouter() *gin.Engine {
 	userVideoService := service.NewUserVideo(videoRepo)
 	userCollectionService := service.NewUserCollection(collectionRepo)
 	likeService := service.NewLike(videoRepo, likeRepo)
-	videoListService := service.NewVideoList(userRepo, videoRepo)
+	// videoListService := service.NewVideoList(userRepo, videoRepo)
 	videoUpdateService := service.NewVideoUpdateStatus(videoRepo)
 	statsService := service.NewStats(statsRepo)
 
@@ -45,7 +45,7 @@ func InitRouter() *gin.Engine {
 		userAvatarService,
 		userListService,
 		userService,
-		videoListService,
+		videoSearchService,
 		videoUpdateService,
 		userVideoService,
 		statsService,
@@ -77,7 +77,9 @@ func InitRouter() *gin.Engine {
 	adminRouter := r.Group("/admin")
 	{
 		adminRouter.POST("/token", userController.Login)
-		adminRouter.POST("/access_token", userController.AccessToken)
+		adminRouter.POST("/access_token", func(c *gin.Context) {
+			userController.AccessToken(c, 1)
+		})
 		adminRouter.Use(middleware.AuthMiddleware(1))
 		{
 			// 获取管理员个人信息
@@ -113,7 +115,9 @@ func InitRouter() *gin.Engine {
 		// 用户登录
 		userRouter.POST("/token", userController.Login)
 		// 利用刷新令牌获取访问令牌
-		userRouter.POST("/access_token", userController.AccessToken)
+		userRouter.POST("/access_token", func(c *gin.Context) {
+			userController.AccessToken(c, 0)
+		})
 
 		userRouter.Use(middleware.AuthMiddleware(0))
 		{

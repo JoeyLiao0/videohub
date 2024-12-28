@@ -18,7 +18,7 @@ type AdminController struct {
 	userAvatarService  *service.UserAvatar
 	userListService    *service.UserList
 	userService        *service.User
-	videoListService   *service.VideoList
+	videoSearchService *service.VideoSearch
 	videoUpdateService *service.VideoUpdateStatus
 	userVideoService   *service.UserVideo
 	statsService       *service.Stats
@@ -29,7 +29,7 @@ func NewAdminController(
 	uas *service.UserAvatar,
 	uls *service.UserList,
 	us *service.User,
-	vls *service.VideoList,
+	vls *service.VideoSearch,
 	vus *service.VideoUpdateStatus,
 	uvs *service.UserVideo,
 	d *service.Stats,
@@ -38,7 +38,7 @@ func NewAdminController(
 		userAvatarService:  uas,
 		userListService:    uls,
 		userService:        us,
-		videoListService:   vls,
+		videoSearchService: vls,
 		videoUpdateService: vus,
 		userVideoService:   uvs,
 		statsService:       d,
@@ -98,16 +98,39 @@ func (ac *AdminController) UpdateUser(c *gin.Context) {
 
 // GetVideos 获取视频列表
 func (ac *AdminController) GetVideos(c *gin.Context) {
-	var request admin.GetVideosRequest
-	if err := c.ShouldBind(&request); err != nil { // 输入为json
+	// var request admin.GetVideosRequest
+	// if err := c.ShouldBind(&request); err != nil { // 输入为json
+	// 	logrus.Debug(err.Error())
+	// 	c.JSON(http.StatusOK, utils.Error(http.StatusBadRequest, "请求无效"))
+	// 	return
+	// }
+
+	// defaultStatus := -1
+	// if request.Status == nil {
+	// 	request.Status = &defaultStatus
+	// }
+
+	// if request.Page == 0 {
+	// 	request.Page = config.AppConfig.Video.DefaultPage
+	// }
+
+	// if request.Limit == 0 {
+	// 	request.Limit = config.AppConfig.Video.DefaultLimit
+	// }
+
+	// response := ac.videoListService.GetVideos(&request)
+	// c.JSON(http.StatusOK, response)
+	// 获取 Query 参数
+	// 或者使用 c.DefaultQuery()
+	var request video.GetVideosRequest
+	if err := c.ShouldBind(&request); err != nil {
 		logrus.Debug(err.Error())
 		c.JSON(http.StatusOK, utils.Error(http.StatusBadRequest, "请求无效"))
 		return
 	}
 
-	defaultStatus := -1
 	if request.Status == nil {
-		request.Status = &defaultStatus
+		request.Status = &config.AppConfig.Video.DefaultStatus
 	}
 
 	if request.Page == 0 {
@@ -117,8 +140,21 @@ func (ac *AdminController) GetVideos(c *gin.Context) {
 	if request.Limit == 0 {
 		request.Limit = config.AppConfig.Video.DefaultLimit
 	}
+	// JWT（可有可无）
+	token := c.GetHeader("Authorization")
+	if token == "" {
+		request.UserID = 0
+	}
+	payload, err := utils.ParseJWT(token, config.AppConfig.JWT.AccessTokenSecret)
+	logrus.Debug(payload)
+	if err != nil {
+		request.UserID = 0
+	} else {
+		request.UserID = payload.ID
+	}
 
-	response := ac.videoListService.GetVideos(&request)
+	// 调用服务层获取视频列表
+	response := ac.videoSearchService.GetVideos(&request)
 	c.JSON(http.StatusOK, response)
 }
 

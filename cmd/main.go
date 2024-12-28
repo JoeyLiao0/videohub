@@ -34,7 +34,7 @@ func main() {
 	c := cron.New(cron.WithSeconds())
 	c.AddFunc("0 0 0 * * *", func() { repository.WriteStats(global.DB) })
 	c.Start()
-	repository.WriteStats(global.DB)
+	// repository.WriteStats(global.DB)
 	
 	go func() {
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {

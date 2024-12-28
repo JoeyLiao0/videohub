@@ -71,7 +71,7 @@ func (us *User) Login(request *user.LoginRequest) *utils.Response {
 	})
 }
 
-func (us *User) AccessToken(request *user.AccessTokenRequest) *utils.Response {
+func (us *User) AccessToken(request *user.AccessTokenRequest, role int8) *utils.Response {
 	payload, err := utils.ParseJWT(request.RefreshToken, config.AppConfig.JWT.RefreshTokenSecret)
 	if err != nil {
 		if errors.Is(err, jwt.ErrTokenExpired) {
@@ -81,6 +81,10 @@ func (us *User) AccessToken(request *user.AccessTokenRequest) *utils.Response {
 			logrus.Error(err.Error())
 			return utils.Error(http.StatusInternalServerError, "服务器内部错误")
 		}
+	}
+	if role != payload.Role {
+		logrus.Debug("role error")
+		return utils.Error(http.StatusBadRequest, "权限错误")
 	}
 
 	if count, err := us.userRepo.Count(map[string]interface{}{"id": payload.ID}); err != nil || count == 0 {
