@@ -28,6 +28,7 @@ func CountViewMiddleware() gin.HandlerFunc {
 				c.Next()
 				return
 			}
+			logrus.Debug("增加视频浏览量")
 			if err := global.Rdb.Incr(global.Ctx, viewKey).Err(); err != nil {
 				logrus.Debug(err.Error())
 				c.JSON(http.StatusOK, utils.Error(http.StatusInternalServerError, "服务器内部错误"))

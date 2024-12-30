@@ -29,7 +29,7 @@ func NewUser(ur *repository.User, cr *repository.Collection, vr *repository.Vide
 	return &(User{userRepo: ur, collectionRepo: cr, videoRepo: vr})
 }
 
-func (us *User) Login(request *user.LoginRequest) *utils.Response {
+func (us *User) Login(request *user.LoginRequest, role int8) *utils.Response {
 	var result model.User
 	if err := us.userRepo.Search(map[string]interface{}{"email": request.Email}, 1, &result); err != nil {
 		logrus.Debug(err.Error())
@@ -44,6 +44,11 @@ func (us *User) Login(request *user.LoginRequest) *utils.Response {
 	if result.Status == 2 {
 		logrus.Debug("user is banned")
 		return utils.Error(http.StatusUnauthorized, "用户已注销")
+	}
+
+	if result.Role != role {
+		logrus.Debug("role error")
+		return utils.Error(http.StatusBadRequest, "权限错误")
 	}
 
 	accessToken, err := utils.GenerateJWT(utils.Payload{ID: result.ID, Role: result.Role}, config.AppConfig.JWT.AccessTokenSecret, config.AppConfig.JWT.AccessTokenExpire)
@@ -82,7 +87,7 @@ func (us *User) AccessToken(request *user.AccessTokenRequest, role int8) *utils.
 			return utils.Error(http.StatusInternalServerError, "服务器内部错误")
 		}
 	}
-	if role != payload.Role {
+	if payload.Role != role {
 		logrus.Debug("role error")
 		return utils.Error(http.StatusBadRequest, "权限错误")
 	}

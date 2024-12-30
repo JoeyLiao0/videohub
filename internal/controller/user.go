@@ -42,14 +42,14 @@ func GetUserID(c *gin.Context) (uint, error) {
 }
 
 // Login 用户登录处理函数，返回范文令牌和刷新令牌给前端
-func (uc *UserController) Login(c *gin.Context) {
+func (uc *UserController) Login(c *gin.Context, role int8) {
 	var request user.LoginRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
 		logrus.Debug(err.Error())
 		c.JSON(http.StatusOK, utils.Error(http.StatusBadRequest, "请求无效"))
 		return
 	}
-	response := uc.userService.Login(&request)
+	response := uc.userService.Login(&request, role)
 	c.JSON(http.StatusOK, response)
 }
 

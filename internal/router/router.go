@@ -76,7 +76,9 @@ func InitRouter() *gin.Engine {
 
 	adminRouter := r.Group("/admin")
 	{
-		adminRouter.POST("/token", userController.Login)
+		adminRouter.POST("/token", func(c *gin.Context) {
+			userController.Login(c, 1)
+		})
 		adminRouter.POST("/access_token", func(c *gin.Context) {
 			userController.AccessToken(c, 1)
 		})
@@ -113,7 +115,9 @@ func InitRouter() *gin.Engine {
 		// 用户注册
 		userRouter.POST("", userController.CreateUser)
 		// 用户登录
-		userRouter.POST("/token", userController.Login)
+		userRouter.POST("/token", func(c *gin.Context) {
+			userController.Login(c, 0)
+		})
 		// 利用刷新令牌获取访问令牌
 		userRouter.POST("/access_token", func(c *gin.Context) {
 			userController.AccessToken(c, 0)
