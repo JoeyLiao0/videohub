@@ -7,12 +7,12 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// LoggerMiddleware 日志中间件
 func LoggerMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
 		path := c.Request.URL.Path
 		raw := c.Request.URL.RawQuery
-
 		c.Next()
 
 		timeStamp := time.Now()

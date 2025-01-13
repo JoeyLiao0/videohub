@@ -17,18 +17,19 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// User 用户服务层操作对象
 type User struct {
-	//用户服务，用到user表、collection表、video表操作
 	userRepo       *repository.User
 	collectionRepo *repository.Collection
 	videoRepo      *repository.Video
 }
 
-// 工厂函数，返回单例的服务层操作对象
+// NewUser 创建一个新的 User 实例
 func NewUser(ur *repository.User, cr *repository.Collection, vr *repository.Video) *User {
 	return &(User{userRepo: ur, collectionRepo: cr, videoRepo: vr})
 }
 
+// Login 用户登录
 func (us *User) Login(request *user.LoginRequest, role int8) *utils.Response {
 	var result model.User
 	if err := us.userRepo.Search(map[string]interface{}{"email": request.Email}, 1, &result); err != nil {
@@ -76,6 +77,7 @@ func (us *User) Login(request *user.LoginRequest, role int8) *utils.Response {
 	})
 }
 
+// AccessToken 用刷新令牌获取新的访问令牌
 func (us *User) AccessToken(request *user.AccessTokenRequest, role int8) *utils.Response {
 	payload, err := utils.ParseJWT(request.RefreshToken, config.AppConfig.JWT.RefreshTokenSecret)
 	if err != nil {
@@ -241,6 +243,7 @@ func (us *User) UpdateUserPassword(id uint, request *user.UpdatePasswordRequest)
 	return utils.Success(http.StatusOK)
 }
 
+// SendEmailVerification 发送邮箱验证码
 func (us *User) SendEmailVerification(request *user.SendEmailVerificationRequest) *utils.Response {
 	code := utils.GenerateCode(6)
 	global.Rdb.Set(global.Ctx, request.Email, code, time.Minute*time.Duration(config.AppConfig.Email.Expiration))
@@ -250,10 +253,10 @@ func (us *User) SendEmailVerification(request *user.SendEmailVerificationRequest
 	}
 
 	logrus.Debug("Email verification sent successfully")
-	// return utils.Success(http.StatusOK)
-	return utils.Ok(http.StatusOK, map[string]string{"code": code})
+	return utils.Success(http.StatusOK)
 }
 
+// CreateUserByAdmin 管理员创建新用户
 func (us *User) CreateUserByAdmin(request *admin.CreateUserRequest) *utils.Response {
 	if count, err := us.userRepo.Count(map[string]interface{}{"username": request.Username}); err != nil || count != 0 {
 		logrus.Debug("username exists")
@@ -285,6 +288,7 @@ func (us *User) CreateUserByAdmin(request *admin.CreateUserRequest) *utils.Respo
 	return utils.Success(http.StatusOK)
 }
 
+// UpdateUserByAdmin 管理员更新用户信息
 func (us *User) UpdateUserByAdmin(request *admin.UpdateUserRequest) *utils.Response {
 	if err := us.userRepo.Update(map[string]interface{}{"id": request.ID}, []string{"status"}, map[string]interface{}{"status": request.Status}); err != nil {
 		logrus.Error(err.Error())

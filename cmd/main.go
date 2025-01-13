@@ -17,8 +17,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// 验证器部分应该可以重写一下, 采用 gin 框架的 binding 直接注册验证器
 func main() {
+	// 初始化相关配置
 	global.Ctx = context.Background()
 	config.InitConfig()
 	logger.InitLogger(config.AppConfig.Run.Debug)
@@ -31,22 +31,23 @@ func main() {
 		Handler: r,
 	}
 
+	// 定时任务
 	c := cron.New(cron.WithSeconds())
 	c.AddFunc("0 0 0 * * *", func() { repository.WriteStats(global.DB) })
 	c.Start()
-	// repository.WriteStats(global.DB)
-	
+
+	// 启动服务
 	go func() {
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			logrus.Fatalf("listen: %s\n", err)
 		}
 	}()
 
+	// 优雅关闭服务
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt)
 	<-quit
 	logrus.Info("Shutdown Server ...")
-
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err := srv.Shutdown(ctx); err != nil {

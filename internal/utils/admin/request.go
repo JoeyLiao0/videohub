@@ -6,13 +6,13 @@ type GetHistoricalDataRequest struct {
 }
 
 type ListUsersRequest struct {
-	Page   int    `form:"page" binding:"required"`   // 当前页码，从1开始
-	Limit  int    `form:"limit" binding:"required"`  // 每页数量
-	Sort   string `form:"sort" binding:"required"`   // 排序字段，如id
-	Order  *int8  `form:"order" binding:"required"`  // 排序方式：0-升序，1-降序
-	Status *int8  `form:"status" binding:"required"` // 用户状态：-1全部，0正常，1禁用，2注销
-	Like   string `form:"like"`                      // 用户名模糊匹配
-	ID     uint   `form:"id"`                        // 用户ID，用于精确查询
+	Page   int    `form:"page" binding:"required"`
+	Limit  int    `form:"limit" binding:"required"`
+	Sort   string `form:"sort" binding:"required"`
+	Order  *int8  `form:"order" binding:"required"`
+	Status *int8  `form:"status" binding:"required"`
+	Like   string `form:"like"`
+	ID     uint   `form:"id"`
 }
 
 type CreateUserRequest struct {
@@ -28,7 +28,7 @@ type UpdateUserRequest struct {
 }
 
 type GetVideosRequest struct {
-	Status *int   `json:"status"` // -1-全部 0-正常 1-审核 2-审核未通过 3-封禁
+	Status *int   `json:"status"`
 	Like   string `json:"like"`
 	Page   int    `json:"page"`
 	Limit  int    `json:"limit"`

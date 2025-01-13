@@ -11,6 +11,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// UserVideo 用户视频服务层操作对象
 type UserVideo struct {
 	videoRepo      *repository.Video
 	likeRepo       *repository.Like
@@ -22,6 +23,7 @@ func NewUserVideo(vr *repository.Video, lr *repository.Like, cr *repository.Coll
 	return &UserVideo{videoRepo: vr, likeRepo: lr, collectionRepo: cr}
 }
 
+// GetUserVideos 获取用户视频列表
 func (uv *UserVideo) GetUserVideos(id uint) *utils.Response {
 	var response user.VideoListResponse
 	conditions := map[string]interface{}{"videos.uploader_id": id}
@@ -62,20 +64,22 @@ func (uv *UserVideo) GetUserVideos(id uint) *utils.Response {
 		isLiked, err := uv.likeRepo.CheckVideoLike(id, response.Videos[i].UploadID)
 		if err != nil {
 			logrus.Error(err.Error())
-			return utils.Error(http.StatusInternalServerError, "获取视频点赞状态失败")
+			return utils.Error(http.StatusInternalServerError, "服务器内部错误")
 		}
 		response.Videos[i].IsLiked = isLiked
 		isCollected, err := uv.collectionRepo.CheckVideoCollect(id, response.Videos[i].UploadID)
 		if err != nil {
 			logrus.Error(err.Error())
-			return utils.Error(http.StatusInternalServerError, "获取视频收藏状态失败")
+			return utils.Error(http.StatusInternalServerError, "服务器内部错误")
 		}
 		response.Videos[i].IsCollected = isCollected
 	}
+
 	logrus.Debug("Get user videos successfully")
 	return utils.Ok(http.StatusOK, &response)
 }
 
+// DeleteUserVideo 删除用户视频
 func (uv *UserVideo) DeleteUserVideo(id uint, request *user.DeleteVideoRequest) *utils.Response {
 	conditions := map[string]interface{}{
 		"uploader_id": id,
@@ -85,6 +89,7 @@ func (uv *UserVideo) DeleteUserVideo(id uint, request *user.DeleteVideoRequest) 
 		logrus.Error(err.Error())
 		return utils.Error(http.StatusInternalServerError, "服务器内部错误")
 	}
+
 	logrus.Debug("Delete video successfully")
 	return utils.Success(http.StatusOK)
 }

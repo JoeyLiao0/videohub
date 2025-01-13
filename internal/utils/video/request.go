@@ -3,7 +3,7 @@ package video
 import "mime/multipart"
 
 type GetVideosRequest struct {
-	Status *int   `form:"status"` // 0-正常 1-审核 2-审核未通过 3-封禁
+	Status *int   `form:"status"`
 	Like   string `form:"like"`
 	Page   int    `form:"page"`
 	Limit  int    `form:"limit"`
@@ -17,7 +17,7 @@ type UpdateVideoStatusRequest struct {
 
 type GetCommentsRequest struct {
 	VideoID string `form:"vid" binding:"required"`
-	UserID  uint   // REMOVE required
+	UserID  uint
 }
 
 type AddCommentRequest struct {
@@ -35,7 +35,7 @@ type DeleteCommentRequest struct {
 type UploadChunkRequest struct {
 	UploadID  string                `form:"upload_id" binding:"required"`
 	ChunkData *multipart.FileHeader `form:"chunk_data" binding:"required"`
-	ChunkID   int                   `form:"chunk_id" binding:"required"` // 从 1 开始
+	ChunkID   int                   `form:"chunk_id" binding:"required"`
 	ChunkSize int                   `form:"chunk_size" binding:"required"`
 	ChunkHash string                `form:"chunk_hash" binding:"required"`
 }

@@ -14,25 +14,30 @@ type Comment struct {
 	DB *gorm.DB
 }
 
+// NewComment 实例化评论数据访问对象
 func NewComment(db *gorm.DB) *Comment {
 	return &Comment{DB: db}
 }
 
+// Search 搜索评论
 func (r *Comment) Search(conditions interface{}, limit int, result interface{}) error {
 	return r.DB.Model(&model.Comment{}).Where(conditions).Limit(limit).Find(result).Error
 }
 
+// Select 查询评论
 func (r *Comment) Select(conditions interface{}, limit int, fields, result interface{}) error {
 	return r.DB.Model(&model.Comment{}).Where(conditions).Limit(limit).Select(fields).Find(result).Error
 }
 
+// Join 连接查询评论
 func (r *Comment) Join(conditions interface{}, limit int, joins string, fields, result interface{}) error {
 	return r.DB.Model(&model.Comment{}).Where(conditions).Limit(limit).Select(fields).Joins(joins).Find(result).Error
 }
 
-// GetCommentsByVideo获取指定视频的评论列表
+// GetCommentsByVideo 获取指定视频的评论列表
 func (r *Comment) GetCommentsByVideo(videoID string, uid uint) ([]video.CommentsOutside, error) {
 	var parentComments []video.CommentInfo
+
 	// 查询父评论（ParentID == -1 且 Status == 0）
 	err := r.DB.Model(&model.Comment{}).
 		Select("id, created_at, user_id, comment_content, video_id, parent_id, likes, status").
@@ -44,8 +49,8 @@ func (r *Comment) GetCommentsByVideo(videoID string, uid uint) ([]video.Comments
 	for i := range parentComments {
 		// 手动查询填充username和avatar
 		var user model.User
-		if err := r.DB.Debug().Model(&model.User{}).
-			Where("id = ?", parentComments[i].UserID). // 使用 uploader_id
+		if err := r.DB.Model(&model.User{}).
+			Where("id = ?", parentComments[i].UserID).
 			First(&user).Error; err != nil {
 			logrus.Warnf("User not found for uploader_id: %d", parentComments[i].UserID)
 		} else {
@@ -60,7 +65,7 @@ func (r *Comment) GetCommentsByVideo(videoID string, uid uint) ([]video.Comments
 		if uid == 0 {
 			isLiked = false
 		} else {
-			isLiked, err = r.CheckIsLiked(parentComment.ID, uid) // uid应该为jwt对应的uid
+			isLiked, err = r.CheckIsLiked(parentComment.ID, uid)
 		}
 		if err != nil {
 			return nil, err
@@ -69,14 +74,14 @@ func (r *Comment) GetCommentsByVideo(videoID string, uid uint) ([]video.Comments
 		commentsOutside = append(commentsOutside, video.CommentsOutside{
 			Comments: parentComment,
 			IsLiked:  isLiked,
-			Reply:    nil, // 子评论稍后填充
+			Reply:    nil,
 		})
 	}
 
 	return commentsOutside, nil
 }
 
-// FillPerCommentsReply 填充子评论并处理IsLiked和ReplyTo字段
+// FillPerCommentsReply 填充子评论并处理 IsLiked 和 ReplyTo 字段
 func (r *Comment) FillPerCommentsReply(commentsOutside []video.CommentsOutside, uid uint) ([]video.CommentsOutside, error) {
 	for i, comment := range commentsOutside {
 		// 使用递归函数填充所有子评论
@@ -92,7 +97,7 @@ func (r *Comment) FillPerCommentsReply(commentsOutside []video.CommentsOutside, 
 	return commentsOutside, nil
 }
 
-// getRepliesRecursive 递归获取子评论，并填充ReplyTo字段
+// getRepliesRecursive 递归获取子评论, 并填充 ReplyTo 字段
 func (r *Comment) getRepliesRecursive(parentID uint, parentUserID uint, uid uint) ([]video.CommentsInside, error) {
 	var childComments []video.CommentInfo
 	// 查询直接子评论
@@ -106,8 +111,8 @@ func (r *Comment) getRepliesRecursive(parentID uint, parentUserID uint, uid uint
 	for i := range childComments {
 		// 手动查询填充 username 和 avatar
 		var user model.User
-		if err := r.DB.Debug().Model(&model.User{}).
-			Where("id = ?", childComments[i].UserID). // 使用 uploader_id
+		if err := r.DB.Model(&model.User{}).
+			Where("id = ?", childComments[i].UserID).
 			First(&user).Error; err != nil {
 			// 如果没有找到用户数据，可以继续，也可以记录日志
 			logrus.Warnf("User not found for uploader_id: %d", childComments[i].UserID)
@@ -156,7 +161,7 @@ func (r *Comment) getRepliesRecursive(parentID uint, parentUserID uint, uid uint
 	return replies, nil
 }
 
-// GetUserName获取reply的用户名
+// GetUserName 获取 reply 的用户名
 func (r *Comment) GetUserName(userID uint) string {
 	var user model.User
 	err := r.DB.Select("username").Where("id = ?", userID).First(&user).Error
@@ -181,14 +186,14 @@ func (r *Comment) CheckIsLiked(commentID uint, userID uint) (bool, error) {
 	return true, nil
 }
 
-// CreateComment创建新的评论
+// CreateComment 创建新的评论
 func (r *Comment) CreateComment(comment *model.Comment) error {
 	return r.DB.Create(comment).Error
 }
 
-// DeleteComment删除评论
+// DeleteComment 删除评论
 func (r *Comment) DeleteComment(cid uint) error {
-	// 将所有子评论的status设置为1（标记为已删除）
+	// 将所有子评论的 status 设置为1（标记为已删除）
 	if err := r.DB.Model(&model.Comment{}).Where("parent_id = ?", cid).Update("status", 1).Error; err != nil {
 		return err
 	}

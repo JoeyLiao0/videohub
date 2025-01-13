@@ -11,15 +11,18 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// VideoController 视频控制器
 type VideoController struct {
-	videoUpload       *service.VideoUpload
-	videoUpdateStatus *service.VideoUpdateStatus
-	videoSearch       *service.VideoSearch
-	like              *service.Like
-	comment           *service.Comment
+	videoUpload       *service.VideoUpload       // 视频上传服务
+	videoUpdateStatus *service.VideoUpdateStatus // 视频状态更新服务
+	videoSearch       *service.VideoSearch       // 视频搜索服务
+	like              *service.Like              // 点赞服务
+	comment           *service.Comment           // 评论服务
 }
 
-func NewVideoController(videoUpload *service.VideoUpload, videoUpdateStatus *service.VideoUpdateStatus, videoSearch *service.VideoSearch, like *service.Like, comment *service.Comment) *VideoController {
+// NewVideoController 创建一个新的 VideoController 实例
+func NewVideoController(videoUpload *service.VideoUpload, videoUpdateStatus *service.VideoUpdateStatus,
+	videoSearch *service.VideoSearch, like *service.Like, comment *service.Comment) *VideoController {
 	return &VideoController{
 		videoUpload:       videoUpload,
 		videoUpdateStatus: videoUpdateStatus,
@@ -31,8 +34,6 @@ func NewVideoController(videoUpload *service.VideoUpload, videoUpdateStatus *ser
 
 // GetVideos 获取视频列表
 func (vc *VideoController) GetVideos(c *gin.Context) {
-	// 获取 Query 参数
-	// 或者使用 c.DefaultQuery()
 	var request video.GetVideosRequest
 	if err := c.ShouldBind(&request); err != nil {
 		logrus.Debug(err.Error())
@@ -64,7 +65,6 @@ func (vc *VideoController) GetVideos(c *gin.Context) {
 		request.UserID = payload.ID
 	}
 
-	// 调用服务层获取视频列表
 	response := vc.videoSearch.GetVideos(&request)
 	c.JSON(http.StatusOK, response)
 }
@@ -78,7 +78,6 @@ func (vc *VideoController) UpdateVideoStatus(c *gin.Context) {
 		return
 	}
 
-	// 调用服务层更新视频状态
 	response := vc.videoUpdateStatus.UpdateVideoStatus(&request)
 	c.JSON(http.StatusOK, response)
 }
@@ -86,24 +85,19 @@ func (vc *VideoController) UpdateVideoStatus(c *gin.Context) {
 // LikeVideo 点赞视频
 func (vc *VideoController) LikeVideo(c *gin.Context) {
 	var request video.LikeVideoRequest
-
-	// 从请求的 JSON body 中解析参数
 	if err := c.ShouldBindJSON(&request); err != nil {
 		c.JSON(http.StatusOK, utils.Error(http.StatusBadRequest, "无效的请求参数"))
 		return
 	}
 
-	// 检查 VideoID 是否为空
 	if request.VideoID == "" {
 		c.JSON(http.StatusOK, utils.Error(http.StatusBadRequest, "视频ID不能为空"))
 		return
 	}
 
-	// 获取用户ID
 	userID, _ := GetUserID(c)
 	request.UserID = userID
 
-	// 调用 LikeVideo 方法处理逻辑
 	response := vc.like.LikeVideo(&request)
 	c.JSON(http.StatusOK, response)
 }
@@ -116,17 +110,14 @@ func (vc *VideoController) UnlikeVideo(c *gin.Context) {
 		return
 	}
 
-	// 检查 VideoID 是否为空
 	if request.VideoID == "" {
 		c.JSON(http.StatusOK, utils.Error(http.StatusBadRequest, "视频ID不能为空"))
 		return
 	}
 
-	// 获取用户ID
 	userID, _ := GetUserID(c)
 	request.UserID = userID
 
-	// 调用 UnlikeVideo 方法处理逻辑
 	response := vc.like.UnlikeVideo(&request)
 	c.JSON(http.StatusOK, response)
 }
@@ -134,7 +125,6 @@ func (vc *VideoController) UnlikeVideo(c *gin.Context) {
 // GetComments 获取视频评论
 func (vc *VideoController) GetComments(c *gin.Context) {
 	var request video.GetCommentsRequest
-	// 获取视频ID
 	if err := c.ShouldBind(&request); err != nil {
 		logrus.Debug(err.Error())
 		c.JSON(http.StatusOK, utils.Error(http.StatusBadRequest, "无效的请求参数"))
@@ -176,13 +166,11 @@ func (vc *VideoController) AddComment(c *gin.Context) {
 // LikeComment 点赞评论
 func (vc *VideoController) LikeComment(c *gin.Context) {
 	var request video.LikeCommentRequest
-
 	if err := c.ShouldBindJSON(&request); err != nil {
 		c.JSON(http.StatusOK, utils.Error(http.StatusBadRequest, "无效的请求参数"))
 		return
 	}
 
-	// 获取用户ID
 	userID, _ := GetUserID(c)
 	request.UserID = userID
 
@@ -193,12 +181,10 @@ func (vc *VideoController) LikeComment(c *gin.Context) {
 // UnlikeComment 取消点赞评论
 func (vc *VideoController) UnlikeComment(c *gin.Context) {
 	var request video.UnLikeCommentRequest
-
 	if err := c.ShouldBind(&request); err != nil {
 		c.JSON(http.StatusOK, utils.Error(http.StatusBadRequest, "无效的请求参数"))
 		return
 	}
-	// 获取用户ID
 	userID, _ := GetUserID(c)
 	request.UserID = userID
 	logrus.Debug(request)

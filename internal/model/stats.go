@@ -2,6 +2,7 @@ package model
 
 import "time"
 
+// Stats 统计数据表
 type Stats struct {
 	ID            uint      `gorm:"primaryKey"`                // 主键
 	LoginCount    int       `gorm:"not null;default:0"`        // 每天的登录人数

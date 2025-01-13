@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// CORSMiddleware 跨域中间件
 func CORSMiddleware() gin.HandlerFunc {
 	return cors.New(cors.Config{
 		AllowOrigins:     config.AppConfig.CORS.AllowOrigins,     // 允许所有域名

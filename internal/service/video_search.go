@@ -18,7 +18,7 @@ type VideoSearch struct {
 	collectionRepo *repository.Collection
 }
 
-// VideoService 实例
+// NewVideoSearch 实例化视频搜索服务
 func NewVideoSearch(vr *repository.Video, lr *repository.Like, cr *repository.Collection) *VideoSearch {
 	return &VideoSearch{videoRepo: vr, likeRepo: lr, collectionRepo: cr}
 }
@@ -36,7 +36,7 @@ func (vs *VideoSearch) GetVideos(request *video.GetVideosRequest) *utils.Respons
 	videos, err := vs.videoRepo.GetVideos(request.Like, *request.Status, request.Page, request.Limit)
 	if err != nil {
 		logrus.Error(err.Error())
-		return utils.Error(http.StatusInternalServerError, "获取视频列表失败")
+		return utils.Error(http.StatusInternalServerError, "服务器内部错误")
 	}
 
 	// 检查是否点赞、收藏
@@ -45,13 +45,13 @@ func (vs *VideoSearch) GetVideos(request *video.GetVideosRequest) *utils.Respons
 			isLiked, err := vs.likeRepo.CheckVideoLike(request.UserID, videos[i].UploadID)
 			if err != nil {
 				logrus.Error(err.Error())
-				return utils.Error(http.StatusInternalServerError, "获取视频点赞状态失败")
+				return utils.Error(http.StatusInternalServerError, "服务器内部错误")
 			}
 			videos[i].IsLiked = isLiked
 			isCollected, err := vs.collectionRepo.CheckVideoCollect(request.UserID, videos[i].UploadID)
 			if err != nil {
 				logrus.Error(err.Error())
-				return utils.Error(http.StatusInternalServerError, "获取视频收藏状态失败")
+				return utils.Error(http.StatusInternalServerError, "服务器内部错误")
 			}
 			videos[i].IsCollected = isCollected
 		}
@@ -65,5 +65,7 @@ func (vs *VideoSearch) GetVideos(request *video.GetVideosRequest) *utils.Respons
 			TotalPages: totalPages,
 		},
 	}
+
+	logrus.Debug("Get videos successfully")
 	return utils.Ok(http.StatusOK, &response)
 }

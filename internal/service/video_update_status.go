@@ -14,12 +14,12 @@ type VideoUpdateStatus struct {
 	videoRepo *repository.Video
 }
 
-// VideoService实例
+// NewVideoUpdateStatus 实例化视频状态更新服务
 func NewVideoUpdateStatus(vr *repository.Video) *VideoUpdateStatus {
 	return &VideoUpdateStatus{videoRepo: vr}
 }
 
-// UpdateVideoStatus更新视频状态
+// UpdateVideoStatus 更新视频状态
 func (vus *VideoUpdateStatus) UpdateVideoStatus(request *video.UpdateVideoStatusRequest) *utils.Response {
 	status := *request.NewStatus
 	// 验证状态合法性

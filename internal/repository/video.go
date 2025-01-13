@@ -10,18 +10,22 @@ import (
 	"gorm.io/gorm"
 )
 
+// Video 提供视频数据访问接口
 type Video struct {
 	DB *gorm.DB
 }
 
+// NewVideo 实例化视频数据访问对象
 func NewVideo(db *gorm.DB) *Video {
 	return &Video{DB: db}
 }
 
+// Search 查询视频
 func (vr *Video) Search(conditions interface{}, limit int, result interface{}) error {
 	return vr.DB.Model(&model.Video{}).Where(conditions).Limit(limit).Find(result).Error
 }
 
+// Count 统计视频数量
 func (vr *Video) Count(status int, like string) (int64, error) {
 	var count int64
 	query := vr.DB.Model(&model.Video{})
@@ -37,14 +41,17 @@ func (vr *Video) Count(status int, like string) (int64, error) {
 	return count, err
 }
 
+// Select 查询视频
 func (vr *Video) Select(conditions interface{}, limit int, fields, result interface{}) error {
 	return vr.DB.Model(&model.Video{}).Where(conditions).Limit(limit).Select(fields).Find(result).Error
 }
 
+// Join 连接查询视频信息
 func (vr *Video) Join(conditions interface{}, limit int, joins string, fields, result interface{}) error {
 	return vr.DB.Model(&model.Video{}).Where(conditions).Limit(limit).Select(fields).Joins(joins).Find(result).Error
 }
 
+// Delete 删除视频
 func (vr *Video) Delete(conditions interface{}) error {
 	return vr.DB.Where(conditions).Delete(&model.Video{}).Error
 }
@@ -60,7 +67,7 @@ func (vr *Video) UpdateVideoStatus(id string, newStatus int8) error {
 	return vr.DB.Model(&model.Video{}).Where("upload_id = ?", id).Update("video_status", newStatus).Error
 }
 
-// 查询视频列表
+// GetVideos 获取视频列表
 func (vr *Video) GetVideos(like string, status, page, limit int) ([]video.VideoInfo, error) {
 	var videoInfos []video.VideoInfo
 
@@ -99,7 +106,6 @@ func (vr *Video) GetVideos(like string, status, page, limit int) ([]video.VideoI
 		return nil, err
 	}
 
-	// 填充观看数（从服务层移到这里）
 	for i := range videoInfos {
 		views, err := global.Rdb.Get(global.Ctx, "video:"+videoInfos[i].UploadID+":views").Int()
 		if err == redis.Nil {
@@ -110,10 +116,10 @@ func (vr *Video) GetVideos(like string, status, page, limit int) ([]video.VideoI
 		}
 		videoInfos[i].Views = views
 
-		// 手动查询填充username和avatar
+		// 手动查询填充 username 和 avatar
 		var user model.User
 		if err := vr.DB.Model(&model.User{}).
-			Where("id = ?", videoInfos[i].UploaderID). // 使用 uploader_id
+			Where("id = ?", videoInfos[i].UploaderID).
 			First(&user).Error; err != nil {
 			logrus.Warnf("User not found for uploader_id: %d", videoInfos[i].UploaderID)
 		} else {

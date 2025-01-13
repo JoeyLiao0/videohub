@@ -14,27 +14,33 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// Stats 提供统计数据业务逻辑
 type Stats struct {
 	statsRepo *repository.Stats
 }
 
+// NewStats 创建统计数据服务
 func NewStats(sr *repository.Stats) *Stats {
 	return &Stats{statsRepo: sr}
 }
 
+// GetRealTimeData 获取实时数据
 func (e *Stats) GetRealTimeData() *utils.Response {
+	// 获取 CPU 使用率
 	cpuPercent, err := cpu.Percent(time.Second, false)
 	if err != nil {
 		logrus.Error(err.Error())
 		return utils.Error(http.StatusInternalServerError, "服务器内部错误")
 	}
 
+	// 获取内存使用情况
 	virtualMem, err := mem.VirtualMemory()
 	if err != nil {
 		logrus.Error(err.Error())
 		return utils.Error(http.StatusInternalServerError, "服务器内部错误")
 	}
 
+	// 获取在线用户数
 	pattern := "user:*:is_online"
 	var cursor uint64
 	var count int
@@ -59,6 +65,7 @@ func (e *Stats) GetRealTimeData() *utils.Response {
 	})
 }
 
+// GetHistoricalData 获取历史数据
 func (e *Stats) GetHistoricalData(request *admin.GetHistoricalDataRequest) *utils.Response {
 	var result []model.Stats
 	if err := e.statsRepo.Search(request.StartDate, request.EndDate, -1, &result); err != nil {
@@ -81,6 +88,7 @@ func (e *Stats) GetHistoricalData(request *admin.GetHistoricalDataRequest) *util
 			Value: item.LoginCount,
 		})
 	}
+
 	logrus.Debug("Get historical data successfully")
 	return utils.Ok(http.StatusOK, response)
 }

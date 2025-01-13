@@ -13,22 +13,20 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// VideoUpload 提供视频上传业务逻辑
 type VideoUpload struct {
 	videoRepo *repository.Video
 }
 
+// NewVideoUpload 实例化视频上传服务
 func NewVideoUpload(vr *repository.Video) *VideoUpload {
 	return &VideoUpload{videoRepo: vr}
 }
 
+// HandleVideoChunk 处理视频切片上传逻辑
 func (vus *VideoUpload) HandleVideoChunk(request *video.UploadChunkRequest) *utils.Response {
-	// if err := utils.CheckFile(request.ChunkData, []string{".mp4", ".avi", ".mov", ".mkv"}, 32<<20); err != nil {
-	// 	logrus.Debug(err.Error())
-	// 	return utils.Error(http.StatusBadRequest, "文件格式错误或文件过大")
-	// }
-	fileSize := request.ChunkData.Size
-
 	// 验证切片大小(byte)
+	fileSize := request.ChunkData.Size
 	if fileSize != int64(request.ChunkSize) {
 		logrus.Debugf("chunk size mismatch: expected %d, got %d", request.ChunkSize, fileSize)
 		return utils.Error(http.StatusBadRequest, "分片大小不匹配")
@@ -48,7 +46,6 @@ func (vus *VideoUpload) HandleVideoChunk(request *video.UploadChunkRequest) *uti
 	// 创建切片文件路径(/tmp/{uploadID}/{uploadID}_{chunkID}.xxx)
 	tmpDir := config.AppConfig.Storage.VideosChunk
 	saveDir := filepath.Join(tmpDir, string(request.UploadID))
-	// tempSavePath := filepath.Join(saveDir, fmt.Sprintf("%s_%d%s", request.UploadID, request.ChunkID, filepath.Ext(request.ChunkData.Filename)))
 	tempSavePath := filepath.Join(saveDir, fmt.Sprintf("%s_%d", request.UploadID, request.ChunkID))
 
 	if err := utils.SaveFile(request.ChunkData, tempSavePath); err != nil {
@@ -69,7 +66,6 @@ func (vus *VideoUpload) HandleVideoComplete(id uint, request *video.CompleteUplo
 	}
 
 	// 调用DAO层获取视频切片列表（[]string）
-	logrus.Debug(request.UploadID)
 	dirPath := filepath.Join(config.AppConfig.Storage.VideosChunk, request.UploadID)
 	chunks, err := utils.ListFilesSortedByName(dirPath, request.ChunkEndID, request.UploadID)
 	if err != nil {

@@ -13,15 +13,15 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// AdminController 包含用户相关的服务
+// AdminController 管理员控制器
 type AdminController struct {
-	userAvatarService  *service.UserAvatar
-	userListService    *service.UserList
-	userService        *service.User
-	videoSearchService *service.VideoSearch
-	videoUpdateService *service.VideoUpdateStatus
-	userVideoService   *service.UserVideo
-	statsService       *service.Stats
+	userAvatarService  *service.UserAvatar        // 用户头像服务
+	userListService    *service.UserList          // 用户列表服务
+	userService        *service.User              // 用户服务
+	videoSearchService *service.VideoSearch       // 视频搜索服务
+	videoUpdateService *service.VideoUpdateStatus // 视频更新服务
+	userVideoService   *service.UserVideo         // 用户视频服务
+	statsService       *service.Stats             // 统计服务
 }
 
 // NewAdminController 创建一个新的 AdminController 实例
@@ -47,7 +47,7 @@ func NewAdminController(
 
 // GetUser 获取管理员个人信息
 func (ac *AdminController) GetUser(c *gin.Context) {
-	id, err := GetUserID(c) // 从上下文中获取用户 ID
+	id, err := GetUserID(c)
 	if err != nil {
 		logrus.Debug(err.Error())
 		c.JSON(http.StatusOK, utils.Error(http.StatusBadRequest, "请求无效"))
@@ -57,7 +57,7 @@ func (ac *AdminController) GetUser(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-// GetUsers 获取用户信息
+// GetUsers 获取所有用户信息
 func (ac *AdminController) GetUsers(c *gin.Context) {
 	var request admin.ListUsersRequest
 	if err := c.ShouldBind(&request); err != nil {
@@ -98,30 +98,6 @@ func (ac *AdminController) UpdateUser(c *gin.Context) {
 
 // GetVideos 获取视频列表
 func (ac *AdminController) GetVideos(c *gin.Context) {
-	// var request admin.GetVideosRequest
-	// if err := c.ShouldBind(&request); err != nil { // 输入为json
-	// 	logrus.Debug(err.Error())
-	// 	c.JSON(http.StatusOK, utils.Error(http.StatusBadRequest, "请求无效"))
-	// 	return
-	// }
-
-	// defaultStatus := -1
-	// if request.Status == nil {
-	// 	request.Status = &defaultStatus
-	// }
-
-	// if request.Page == 0 {
-	// 	request.Page = config.AppConfig.Video.DefaultPage
-	// }
-
-	// if request.Limit == 0 {
-	// 	request.Limit = config.AppConfig.Video.DefaultLimit
-	// }
-
-	// response := ac.videoListService.GetVideos(&request)
-	// c.JSON(http.StatusOK, response)
-	// 获取 Query 参数
-	// 或者使用 c.DefaultQuery()
 	var request video.GetVideosRequest
 	if err := c.ShouldBind(&request); err != nil {
 		logrus.Debug(err.Error())
@@ -153,14 +129,12 @@ func (ac *AdminController) GetVideos(c *gin.Context) {
 		request.UserID = payload.ID
 	}
 
-	// 调用服务层获取视频列表
 	response := ac.videoSearchService.GetVideos(&request)
 	c.JSON(http.StatusOK, response)
 }
 
 // UpdateVideo 更新视频信息
 func (ac *AdminController) UpdateVideo(c *gin.Context) {
-	// 使用 video 包中的请求结构体
 	var request video.UpdateVideoStatusRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
 		logrus.Debug(err.Error())
@@ -181,16 +155,17 @@ func (ac *AdminController) DeleteVideo(c *gin.Context) {
 		return
 	}
 
-	// 使用管理员专用的删除方法
 	response := ac.userVideoService.DeleteVideoByAdmin(&request)
 	c.JSON(http.StatusOK, response)
 }
 
+// GetRealTimeData 获取实时数据(在线人数, cpu, 内存)
 func (ac *AdminController) GetRealTimeData(c *gin.Context) {
 	resonse := ac.statsService.GetRealTimeData()
 	c.JSON(http.StatusOK, resonse)
 }
 
+// GetHistoricalData 获取历史数据(新增用户数, 新增视频浏览量, 每天登录用户数)
 func (ac *AdminController) GetHistoricalData(c *gin.Context) {
 	var request admin.GetHistoricalDataRequest
 	if err := c.ShouldBind(&request); err != nil {
@@ -198,6 +173,7 @@ func (ac *AdminController) GetHistoricalData(c *gin.Context) {
 		c.JSON(http.StatusOK, utils.Error(http.StatusBadRequest, "请求无效"))
 		return
 	}
+
 	response := ac.statsService.GetHistoricalData(&request)
 	c.JSON(http.StatusOK, response)
 }

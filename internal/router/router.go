@@ -12,10 +12,11 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// InitRouter 初始化路由
 func InitRouter() *gin.Engine {
 	db := global.DB
 
-	//1、db 到 repository
+	// 1、db 到 repository
 	collectionRepo := repository.NewCollection(db)
 	userRepo := repository.NewUser(db)
 	videoRepo := repository.NewVideo(db)
@@ -23,7 +24,7 @@ func InitRouter() *gin.Engine {
 	likeRepo := repository.NewLike(db)
 	statsRepo := repository.NewStats(db)
 
-	//2、repository 到 service
+	// 2、repository 到 service
 	userAvatarService := service.NewUserAvatar(userRepo)
 	userListService := service.NewUserList(userRepo)
 	userService := service.NewUser(userRepo, collectionRepo, videoRepo)
@@ -34,11 +35,10 @@ func InitRouter() *gin.Engine {
 	userVideoService := service.NewUserVideo(videoRepo, likeRepo, collectionRepo)
 	userCollectionService := service.NewUserCollection(videoRepo, likeRepo, collectionRepo)
 	likeService := service.NewLike(videoRepo, likeRepo)
-	// videoListService := service.NewVideoList(userRepo, videoRepo)
 	videoUpdateService := service.NewVideoUpdateStatus(videoRepo)
 	statsService := service.NewStats(statsRepo)
 
-	//3、service 到 controller
+	// 3、service 到 controller
 	userController := controller.NewUserController(userAvatarService, userListService, userService, userVideoService, userCollectionService)
 	videoController := controller.NewVideoController(videoUploadService, VideoUpdateStatusService, videoSearchService, likeService, commentService)
 	adminController := controller.NewAdminController(
@@ -51,18 +51,18 @@ func InitRouter() *gin.Engine {
 		statsService,
 	)
 
-	// r := gin.Default()
 	r := gin.New()
 	r.Use(gin.Recovery())
 	r.Use(gin.Logger())
 	// 为 multipart forms 设置较低的内存限制 (默认是 32 MiB)
-	// r.MaxMultipartMemory = 8 << 20  // 8 MiB
+	// 例如: r.MaxMultipartMemory = 8 << 20  // 8 MiB
 
 	// 日志中间件
 	r.Use(middleware.LoggerMiddleware())
 	// CORS 跨域中间件
 	r.Use(middleware.CORSMiddleware())
 
+	// 静态文件路由组
 	staticGroup := r.Group("/static")
 	{
 		// 设置静态文件夹路径  (url前缀, 文件夹路径)
@@ -74,11 +74,14 @@ func InitRouter() *gin.Engine {
 		}
 	}
 
+	// 管理员路由组
 	adminRouter := r.Group("/admin")
 	{
+		// 管理员登录
 		adminRouter.POST("/token", func(c *gin.Context) {
 			userController.Login(c, 1)
 		})
+		// 利用刷新令牌获取访问令牌
 		adminRouter.POST("/access_token", func(c *gin.Context) {
 			userController.AccessToken(c, 1)
 		})
@@ -147,6 +150,7 @@ func InitRouter() *gin.Engine {
 			userRouter.DELETE("/collections", userController.DeleteCollection)
 		}
 	}
+
 	// 视频路由组
 	videoRouter := r.Group("/videos")
 	{
@@ -178,6 +182,7 @@ func InitRouter() *gin.Engine {
 		}
 	}
 
+	// API 路由组
 	apiRouter := r.Group("/api")
 	{
 		// 发送邮箱验证码

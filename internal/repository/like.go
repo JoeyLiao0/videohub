@@ -7,10 +7,12 @@ import (
 	"gorm.io/gorm"
 )
 
+// Like 提供点赞数据访问接口
 type Like struct {
 	DB *gorm.DB
 }
 
+// NewLike 实例化点赞数据访问对象
 func NewLike(db *gorm.DB) *Like {
 	return &Like{DB: db}
 }

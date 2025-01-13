@@ -10,19 +10,20 @@ import (
 	"gorm.io/gorm"
 )
 
+// Stats 提供统计数据访问接口
 type Stats struct {
 	DB *gorm.DB
 }
 
+// NewStats 实例化统计数据访问对象
 func NewStats(db *gorm.DB) *Stats {
 	return &Stats{DB: db}
 }
 
+// WriteStats 定时写入统计数据, 每天00:00定时执行, 写入前一天的统计数据
 func WriteStats(db *gorm.DB) {
 	endOfDay := time.Now().Truncate(24 * time.Hour)
 	startOfDay := endOfDay.Add(-24 * time.Hour)
-	// startOfDay := time.Now().Truncate(24 * time.Hour)
-	// endOfDay := startOfDay.Add(24 * time.Hour)
 	start := startOfDay.UnixMilli()
 	end := endOfDay.UnixMilli()
 
@@ -35,7 +36,7 @@ func WriteStats(db *gorm.DB) {
 		logrus.Error(err.Error())
 		return
 	}
-	
+
 	var newAccounts int64
 	if err := db.Model(&model.User{}).Where("created_at BETWEEN ? AND ? AND role = 0", start, end).Count(&newAccounts).Error; err != nil {
 		logrus.Error(err.Error())
@@ -95,6 +96,7 @@ func WriteStats(db *gorm.DB) {
 	}
 }
 
+// Search 查询统计数据
 func (e *Stats) Search(startDate, endDate string, limit int, result interface{}) error {
 	return e.DB.Model(&model.Stats{}).Where("date BETWEEN ? AND ?", startDate, endDate).Limit(limit).Find(result).Error
 }
