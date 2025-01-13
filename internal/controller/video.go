@@ -23,19 +23,18 @@ type VideoController struct {
 // NewVideoController 创建一个新的 VideoController 实例
 func NewVideoController(videoUpload *service.VideoUpload, videoUpdateStatus *service.VideoUpdateStatus,
 	videoSearch *service.VideoSearch, like *service.Like, comment *service.Comment) *VideoController {
-	return &VideoController{
-		videoUpload:       videoUpload,
-		videoUpdateStatus: videoUpdateStatus,
-		videoSearch:       videoSearch,
-		like:              like,
-		comment:           comment,
-	}
+=======
+	videoUpload       *service.VideoUpload
+	videoUpdateStatus *service.VideoUpdateStatus
+	videoSearch       *service.VideoSearch
+	like              *service.Like
+	comment           *service.Comment
 }
 
 // GetVideos 获取视频列表
 func (vc *VideoController) GetVideos(c *gin.Context) {
 	var request video.GetVideosRequest
-	if err := c.ShouldBind(&request); err != nil {
+	if err := c.ShouldBindJSON(&request); err != nil { // 输入为json
 		logrus.Debug(err.Error())
 		c.JSON(http.StatusOK, utils.Error(http.StatusBadRequest, "请求无效"))
 		return
@@ -58,7 +57,7 @@ func (vc *VideoController) GetVideos(c *gin.Context) {
 		request.UserID = 0
 	}
 	payload, err := utils.ParseJWT(token, config.AppConfig.JWT.AccessTokenSecret)
-
+  
 	if err != nil {
 		request.UserID = 0
 	} else {
@@ -89,7 +88,7 @@ func (vc *VideoController) LikeVideo(c *gin.Context) {
 		c.JSON(http.StatusOK, utils.Error(http.StatusBadRequest, "无效的请求参数"))
 		return
 	}
-
+  
 	if request.VideoID == "" {
 		c.JSON(http.StatusOK, utils.Error(http.StatusBadRequest, "视频ID不能为空"))
 		return

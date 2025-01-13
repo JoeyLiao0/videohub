@@ -25,7 +25,7 @@ func NewComment(cr *repository.Comment, vr *repository.Video) *Comment {
 func (cs *Comment) GetComments(request *video.GetCommentsRequest) *utils.Response {
 	vid := request.VideoID
 	uid := request.UserID
-
+  
 	// comments中先放入父评论为-1的评论，每个评论的 reply 数组先为空
 	comments, err := cs.commentRepo.GetCommentsByVideo(vid, uid)
 	if err != nil {

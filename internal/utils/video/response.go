@@ -1,5 +1,7 @@
 package video
 
+import "videohub/internal/model"
+
 type VideoInfo struct {
 	UploadID       string `json:"id"`
 	CreatedAt      int64  `json:"published_at"`
@@ -43,6 +45,17 @@ type CommentsInside struct {
 }
 type CommentsOutside struct {
 	Comments CommentInfo      `json:"comments"`
+	IsLiked  bool             `json:"is_liked"`
+	Reply    []CommentsInside `json:"reply"`
+}
+
+type CommentsInside struct {
+	Comments model.Comment `json:"comments"`
+	IsLiked  bool          `json:"is_liked"`
+	ReplyTo  string        `json:"reply_to"`
+}
+type CommentsOutside struct {
+	Comments model.Comment    `json:"comments"`
 	IsLiked  bool             `json:"is_liked"`
 	Reply    []CommentsInside `json:"reply"`
 }

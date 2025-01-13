@@ -70,3 +70,14 @@ type UnLikeCommentRequest struct {
 	VideoID   string `form:"vid"`
 	CommentID uint   `form:"cid"`
 }
+
+type LikeVideoRequest struct {
+	UserID  uint   `json:"uid"`
+	VideoID string `json:"vid"`
+}
+
+type LikeCommentRequest struct {
+	UserID    uint
+	VideoID   string `json:"vid"`
+	CommentID uint   `json:"cid"`
+}
