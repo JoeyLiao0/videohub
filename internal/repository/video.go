@@ -28,7 +28,7 @@ func (vr *Video) Count(status int, like string) (int64, error) {
 	if status != -1 {
 		query = query.Where("videos.video_status = ?", status)
 	}
-	
+
 	// 标题模糊搜索
 	if like != "" {
 		query = query.Where("videos.title LIKE ?", "%"+like+"%")
@@ -89,7 +89,7 @@ func (vr *Video) GetVideos(like string, status, page, limit int) ([]video.VideoI
 	if status != -1 {
 		query = query.Where("videos.video_status = ?", status)
 	}
-	
+
 	// 标题模糊搜索
 	if like != "" {
 		query = query.Where("videos.title LIKE ?", "%"+like+"%")
@@ -118,7 +118,7 @@ func (vr *Video) GetVideos(like string, status, page, limit int) ([]video.VideoI
 			logrus.Warnf("User not found for uploader_id: %d", videoInfos[i].UploaderID)
 		} else {
 			videoInfos[i].UploaderName = user.Username
-			videoInfos[i].UploadAvatar = user.Avatar
+			videoInfos[i].UploaderAvatar = user.Avatar
 		}
 	}
 

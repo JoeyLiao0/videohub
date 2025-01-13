@@ -30,7 +30,7 @@ func AuthMiddleware(role int8) gin.HandlerFunc {
 				c.JSON(http.StatusOK, utils.Error(http.StatusUnauthorized, "未授权"))
 			} else {
 				logrus.Error(err.Error())
-				c.JSON(http.StatusOK, utils.Error(http.StatusInternalServerError, "未授权"))
+				c.JSON(http.StatusOK, utils.Error(http.StatusUnauthorized, "未授权"))
 			}
 			c.Abort()
 			return

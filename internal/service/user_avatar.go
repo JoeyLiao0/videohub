@@ -29,6 +29,22 @@ func (uas *UserAvatar) UploadUserAvatar(id uint, request *user.UploadAvatarReque
 		return utils.Error(http.StatusBadRequest, "文件格式错误或文件过大")
 	}
 
+	var result struct {
+		Avatar string
+	}
+
+	if err := uas.userRepo.Search(map[string]interface{}{"id": id}, 1, &result); err != nil {
+		logrus.Error(err.Error())
+		return utils.Error(http.StatusInternalServerError, "服务器内部错误")
+	}
+
+	if filepath.Base(result.Avatar) != "tourist.png" {
+		if err := utils.RemoveFile(filepath.Join(config.AppConfig.Storage.Images, filepath.Base(result.Avatar))); err != nil {
+			logrus.Error(err.Error())
+			return utils.Error(http.StatusInternalServerError, "服务器内部错误")
+		}
+	}
+
 	fileExt := filepath.Ext(request.Avatar.Filename)
 	filePath := filepath.Join(config.AppConfig.Storage.Images, fmt.Sprintf("%d%s", id, fileExt))
 	if err := utils.SaveFile(request.Avatar, filePath); err != nil {

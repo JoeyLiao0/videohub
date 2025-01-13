@@ -49,7 +49,7 @@ func (vus *VideoUpload) HandleVideoChunk(request *video.UploadChunkRequest) *uti
 	tmpDir := config.AppConfig.Storage.VideosChunk
 	saveDir := filepath.Join(tmpDir, string(request.UploadID))
 	// tempSavePath := filepath.Join(saveDir, fmt.Sprintf("%s_%d%s", request.UploadID, request.ChunkID, filepath.Ext(request.ChunkData.Filename)))
-	tempSavePath := filepath.Join(saveDir, fmt.Sprintf("%s_%d%s", request.UploadID, request.ChunkID, ".mp4"))
+	tempSavePath := filepath.Join(saveDir, fmt.Sprintf("%s_%d", request.UploadID, request.ChunkID))
 
 	if err := utils.SaveFile(request.ChunkData, tempSavePath); err != nil {
 		logrus.Error(err.Error())
@@ -69,8 +69,9 @@ func (vus *VideoUpload) HandleVideoComplete(id uint, request *video.CompleteUplo
 	}
 
 	// 调用DAO层获取视频切片列表（[]string）
+	logrus.Debug(request.UploadID)
 	dirPath := filepath.Join(config.AppConfig.Storage.VideosChunk, request.UploadID)
-	chunks, err := utils.ListFilesSortedByName(dirPath, request.ChunkEndID)
+	chunks, err := utils.ListFilesSortedByName(dirPath, request.ChunkEndID, request.UploadID)
 	if err != nil {
 		logrus.Error(err.Error())
 		return utils.Error(http.StatusInternalServerError, "服务器内部错误")
@@ -85,7 +86,7 @@ func (vus *VideoUpload) HandleVideoComplete(id uint, request *video.CompleteUplo
 
 	// 校验哈希
 	if hashValue != request.VideoHash {
-		logrus.Debugf("hash mismatch: expected %s, got %s", request.VideoHash, hashValue)
+		logrus.Debugf("hash mismatch: expected %s, got %s", hashValue, request.VideoHash)
 		return utils.Error(http.StatusBadRequest, "哈希校验错误")
 	}
 
@@ -98,7 +99,7 @@ func (vus *VideoUpload) HandleVideoComplete(id uint, request *video.CompleteUplo
 	}
 
 	// 合并切片文件到输出视频文件
-	videoPath := filepath.Join(config.AppConfig.Storage.VideosData, fmt.Sprintf("%s%s", request.UploadID, filepath.Ext(chunks[0])))
+	videoPath := filepath.Join(config.AppConfig.Storage.VideosData, fmt.Sprintf("%s%s", request.UploadID, ".mp4"))
 	if err := utils.MergeFiles(chunks, videoPath); err != nil {
 		logrus.Error(err.Error())
 		return utils.Error(http.StatusInternalServerError, "服务器内部错误")
@@ -109,7 +110,7 @@ func (vus *VideoUpload) HandleVideoComplete(id uint, request *video.CompleteUplo
 		Title:       request.Title,
 		Description: request.Description,
 		CoverPath:   utils.GetURLPath(config.AppConfig.Static.Cover, fmt.Sprintf("%s%s", request.UploadID, coverExt)),
-		VideoPath:   utils.GetURLPath(config.AppConfig.Static.Video, fmt.Sprintf("%s%s", request.UploadID, filepath.Ext(chunks[0]))),
+		VideoPath:   utils.GetURLPath(config.AppConfig.Static.Video, fmt.Sprintf("%s%s", request.UploadID, ".mp4")),
 		UploaderID:  id,
 		VideoStatus: 1,
 	}

@@ -13,12 +13,15 @@ import (
 	"mime/multipart"
 	"os"
 	"path/filepath"
+	"sort"
+	"strconv"
 	"text/template"
 	"time"
 	"videohub/config"
 	"videohub/global"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/sirupsen/logrus"
 	"gopkg.in/gomail.v2"
 )
 
@@ -258,10 +261,18 @@ func RemoveDir(dirPath string) error {
 	if _, err := os.Stat(dirPath); os.IsNotExist(err) {
 		return err
 	}
-
 	// 删除目录下的所有文件和子目录
-	err := os.RemoveAll(dirPath)
-	if err != nil {
+	if err := os.RemoveAll(dirPath); err != nil {
+		return err
+	}
+	return nil
+}
+
+func RemoveFile(filePath string) error {
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		return err
+	}
+	if err := os.Remove(filePath); err != nil {
 		return err
 	}
 	return nil
@@ -287,6 +298,7 @@ func CalculateFileHash(input interface{}) (string, error) {
 	case []string:
 		// 处理 []string 类型
 		for _, filePath := range v {
+			logrus.Debug(filePath)
 			file, err := os.Open(filePath)
 			if err != nil {
 				return "", err
@@ -309,7 +321,7 @@ func CalculateFileHash(input interface{}) (string, error) {
 }
 
 // ListFilesSortedByName 列出指定目录下按名称排序的文件名
-func ListFilesSortedByName(dirPath string, count int) ([]string, error) {
+func ListFilesSortedByName(dirPath string, count int, prefix string) ([]string, error) {
 	files, err := os.ReadDir(dirPath)
 	if err != nil {
 		return nil, err
@@ -318,8 +330,18 @@ func ListFilesSortedByName(dirPath string, count int) ([]string, error) {
 	var fileNames []string
 	for _, file := range files {
 		if !file.IsDir() {
-			fileNames = append(fileNames, filepath.Join(dirPath, file.Name()))
+			fileNames = append(fileNames, file.Name())
 		}
+	}
+	logrus.Debug(fileNames)
+	sort.Slice(fileNames, func(i, j int) bool {
+		id1, _ := strconv.Atoi(filepath.Base(fileNames[i])[len(prefix)+1:])
+		id2, _ := strconv.Atoi(filepath.Base(fileNames[j])[len(prefix)+1:])
+		return id1 < id2
+	})
+
+	for i, fileName := range fileNames {
+		fileNames[i] = filepath.Join(dirPath, fileName)
 	}
 
 	// 检查是否有缺失切片
@@ -329,7 +351,7 @@ func ListFilesSortedByName(dirPath string, count int) ([]string, error) {
 	return fileNames, nil
 }
 
-func GenerateUsername(n int) (string , error) {
+func GenerateUsername(n int) (string, error) {
 	letters := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 	result := make([]byte, n)
 	for i := range result {

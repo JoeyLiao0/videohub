@@ -175,7 +175,7 @@ func (ac *AdminController) UpdateVideo(c *gin.Context) {
 // DeleteVideo 删除视频
 func (ac *AdminController) DeleteVideo(c *gin.Context) {
 	var request user.DeleteVideoRequest
-	if err := c.ShouldBindJSON(&request); err != nil {
+	if err := c.ShouldBind(&request); err != nil {
 		logrus.Debug(err.Error())
 		c.JSON(http.StatusOK, utils.Error(http.StatusBadRequest, "请求参数错误"))
 		return

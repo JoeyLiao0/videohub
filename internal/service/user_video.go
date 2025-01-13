@@ -12,23 +12,37 @@ import (
 )
 
 type UserVideo struct {
-	videoRepo *repository.Video // 视频仓库的指针，用于操作视频数据
+	videoRepo      *repository.Video
+	likeRepo       *repository.Like
+	collectionRepo *repository.Collection
 }
 
 // NewUserVideo 创建一个新的 UserVideo 实例
-func NewUserVideo(vr *repository.Video) *UserVideo {
-	return &UserVideo{videoRepo: vr}
+func NewUserVideo(vr *repository.Video, lr *repository.Like, cr *repository.Collection) *UserVideo {
+	return &UserVideo{videoRepo: vr, likeRepo: lr, collectionRepo: cr}
 }
 
 func (uv *UserVideo) GetUserVideos(id uint) *utils.Response {
 	var response user.VideoListResponse
 	conditions := map[string]interface{}{"videos.uploader_id": id}
 	joins := "left join users on videos.uploader_id = users.id"
-	fields := []string{"upload_id", "created_at", "title", "description", "cover_path", "video_path", "video_status", "likes", "favorites", "comments"}
+	fields := []string{
+		"upload_id",
+		"created_at",
+		"title",
+		"description",
+		"cover_path",
+		"video_path",
+		"video_status",
+		"likes",
+		"favorites",
+		"comments",
+	}
 	for i, field := range fields {
 		fields[i] = "videos." + field
 	}
 	fields = append(fields, "users.username as uploader_name")
+	fields = append(fields, "users.avatar as uploader_avatar")
 	if err := uv.videoRepo.Join(conditions, -1, joins, fields, &response.Videos); err != nil {
 		logrus.Error(err.Error())
 		return utils.Error(http.StatusInternalServerError, "服务器内部错误")
@@ -44,6 +58,19 @@ func (uv *UserVideo) GetUserVideos(id uint) *utils.Response {
 			return utils.Error(http.StatusInternalServerError, "服务器内部错误")
 		}
 		response.Videos[i].Views = views
+
+		isLiked, err := uv.likeRepo.CheckVideoLike(id, response.Videos[i].UploadID)
+		if err != nil {
+			logrus.Error(err.Error())
+			return utils.Error(http.StatusInternalServerError, "获取视频点赞状态失败")
+		}
+		response.Videos[i].IsLiked = isLiked
+		isCollected, err := uv.collectionRepo.CheckVideoCollect(id, response.Videos[i].UploadID)
+		if err != nil {
+			logrus.Error(err.Error())
+			return utils.Error(http.StatusInternalServerError, "获取视频收藏状态失败")
+		}
+		response.Videos[i].IsCollected = isCollected
 	}
 	logrus.Debug("Get user videos successfully")
 	return utils.Ok(http.StatusOK, &response)
@@ -52,7 +79,7 @@ func (uv *UserVideo) GetUserVideos(id uint) *utils.Response {
 func (uv *UserVideo) DeleteUserVideo(id uint, request *user.DeleteVideoRequest) *utils.Response {
 	conditions := map[string]interface{}{
 		"uploader_id": id,
-		"upload_id": request.VideoID,
+		"upload_id":   request.VideoID,
 	}
 	if err := uv.videoRepo.Delete(conditions); err != nil {
 		logrus.Error(err.Error())

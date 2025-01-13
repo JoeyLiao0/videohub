@@ -13,22 +13,36 @@ import (
 )
 
 type UserCollection struct {
+	videoRepo      *repository.Video
+	likeRepo       *repository.Like
 	collectionRepo *repository.Collection
 }
 
-func NewUserCollection(cr *repository.Collection) *UserCollection {
-	return &UserCollection{collectionRepo: cr}
+func NewUserCollection(vr *repository.Video, lr *repository.Like, cr *repository.Collection) *UserCollection {
+	return &UserCollection{videoRepo: vr, likeRepo: lr, collectionRepo: cr}
 }
 
 func (uc *UserCollection) GetUserCollections(id uint) *utils.Response {
 	var response user.VideoListResponse
 	conditions := map[string]interface{}{"collections.user_id": id}
 	joins := []string{"left join videos on collections.video_id = videos.upload_id", "left join users on collections.user_id = users.id"}
-	fields := []string{"upload_id", "created_at", "title", "description", "cover_path", "video_path", "video_status", "likes", "favorites", "comments"}
+	fields := []string{
+		"upload_id",
+		"created_at",
+		"title",
+		"description",
+		"cover_path",
+		"video_path",
+		"video_status",
+		"likes",
+		"favorites",
+		"comments",
+	}
 	for i, field := range fields {
 		fields[i] = "videos." + field
 	}
 	fields = append(fields, "users.username as uploader_name")
+	fields = append(fields, "users.avatar as uploader_avatar")
 	if err := uc.collectionRepo.GetUserCollections(conditions, -1, joins, fields, &response.Videos); err != nil {
 		logrus.Error(err.Error())
 		return utils.Error(http.StatusInternalServerError, "服务器内部错误")
@@ -44,8 +58,21 @@ func (uc *UserCollection) GetUserCollections(id uint) *utils.Response {
 			return utils.Error(http.StatusInternalServerError, "服务器内部错误")
 		}
 		response.Videos[i].Views = views
+
+		isLiked, err := uc.likeRepo.CheckVideoLike(id, response.Videos[i].UploadID)
+		if err != nil {
+			logrus.Error(err.Error())
+			return utils.Error(http.StatusInternalServerError, "获取视频点赞状态失败")
+		}
+		response.Videos[i].IsLiked = isLiked
+		isCollected, err := uc.collectionRepo.CheckVideoCollect(id, response.Videos[i].UploadID)
+		if err != nil {
+			logrus.Error(err.Error())
+			return utils.Error(http.StatusInternalServerError, "获取视频收藏状态失败")
+		}
+		response.Videos[i].IsCollected = isCollected
 	}
-	logrus.Debug("Get user collections successfully")
+	logrus.Debug("Get user videos successfully")
 	return utils.Ok(http.StatusOK, &response)
 }
 

@@ -146,7 +146,7 @@ func (us *User) CreateUser(request *user.CreateUserRequest) *utils.Response {
 	newUser.Salt = utils.GenerateSalt(16)
 	newUser.Password = utils.HashPassword(request.Password, newUser.Salt)
 	newUser.Email = request.Email
-	newUser.Avatar = fmt.Sprintf("%s%s%s", config.AppConfig.Static.Base, config.AppConfig.Static.Avatar, "/tourist.jpeg")
+	newUser.Avatar = fmt.Sprintf("%s%s%s", config.AppConfig.Static.Base, config.AppConfig.Static.Avatar, "/tourist.png")
 
 	if err := us.userRepo.Create(&newUser); err != nil {
 		logrus.Error(err.Error())
@@ -275,7 +275,7 @@ func (us *User) CreateUserByAdmin(request *admin.CreateUserRequest) *utils.Respo
 	} else {
 		newUser.Avatar = request.Avatar
 	}
-	
+
 	if err := us.userRepo.Create(&newUser); err != nil {
 		logrus.Error(err.Error())
 		return utils.Error(http.StatusInternalServerError, "服务器内部错误")
@@ -285,7 +285,7 @@ func (us *User) CreateUserByAdmin(request *admin.CreateUserRequest) *utils.Respo
 	return utils.Success(http.StatusOK)
 }
 
-func (us *User) UpdateUserByAdmin(request *admin.UpdateUserRequest) *utils.Response{
+func (us *User) UpdateUserByAdmin(request *admin.UpdateUserRequest) *utils.Response {
 	if err := us.userRepo.Update(map[string]interface{}{"id": request.ID}, []string{"status"}, map[string]interface{}{"status": request.Status}); err != nil {
 		logrus.Error(err.Error())
 		return utils.Error(http.StatusInternalServerError, "服务器内部错误")
