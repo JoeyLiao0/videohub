@@ -12,45 +12,55 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// InitRouter 初始化路由
 func InitRouter() *gin.Engine {
 	db := global.DB
 
-	//1、db 到 repository
+	// 1、db 到 repository
 	collectionRepo := repository.NewCollection(db)
 	userRepo := repository.NewUser(db)
 	videoRepo := repository.NewVideo(db)
 	commentRepo := repository.NewComment(db)
 	likeRepo := repository.NewLike(db)
+	statsRepo := repository.NewStats(db)
 
-	//2、repository 到 service
+	// 2、repository 到 service
 	userAvatarService := service.NewUserAvatar(userRepo)
 	userListService := service.NewUserList(userRepo)
 	userService := service.NewUser(userRepo, collectionRepo, videoRepo)
 	videoUploadService := service.NewVideoUpload(videoRepo)
 	VideoUpdateStatusService := service.NewVideoUpdateStatus(videoRepo)
-	videoSearchService := service.NewVideoSearch(videoRepo, likeRepo)
+	videoSearchService := service.NewVideoSearch(videoRepo, likeRepo, collectionRepo)
 	commentService := service.NewComment(commentRepo, videoRepo)
-	userVideoService := service.NewUserVideo(videoRepo)
-	userCollectionService := service.NewUserCollection(collectionRepo)
+	userVideoService := service.NewUserVideo(videoRepo, likeRepo, collectionRepo)
+	userCollectionService := service.NewUserCollection(videoRepo, likeRepo, collectionRepo)
 	likeService := service.NewLike(videoRepo, likeRepo)
+	videoUpdateService := service.NewVideoUpdateStatus(videoRepo)
+	statsService := service.NewStats(statsRepo)
 
-	//3、service 到 controller
+	// 3、service 到 controller
 	userController := controller.NewUserController(userAvatarService, userListService, userService, userVideoService, userCollectionService)
 	videoController := controller.NewVideoController(videoUploadService, VideoUpdateStatusService, videoSearchService, likeService, commentService)
-	adminController := controller.NewAdminController(userAvatarService, userListService, userService)
+	adminController := controller.NewAdminController(
+		userAvatarService,
+		userListService,
+		userService,
+		videoSearchService,
+		videoUpdateService,
+		userVideoService,
+		statsService,
+	)
 
-	// r := gin.Default()
 	r := gin.New()
 	r.Use(gin.Recovery())
 	r.Use(gin.Logger())
-	// 为 multipart forms 设置较低的内存限制 (默认是 32 MiB)
-	// r.MaxMultipartMemory = 8 << 20  // 8 MiB
 
 	// 日志中间件
 	r.Use(middleware.LoggerMiddleware())
 	// CORS 跨域中间件
 	r.Use(middleware.CORSMiddleware())
 
+	// 静态文件路由组
 	staticGroup := r.Group("/static")
 	{
 		// 设置静态文件夹路径  (url前缀, 文件夹路径)
@@ -62,10 +72,17 @@ func InitRouter() *gin.Engine {
 		}
 	}
 
+	// 管理员路由组
 	adminRouter := r.Group("/admin")
 	{
-		adminRouter.POST("/token", userController.Login)
-		adminRouter.POST("/access_token", userController.AccessToken)
+		// 管理员登录
+		adminRouter.POST("/token", func(c *gin.Context) {
+			userController.Login(c, 1)
+		})
+		// 利用刷新令牌获取访问令牌
+		adminRouter.POST("/access_token", func(c *gin.Context) {
+			userController.AccessToken(c, 1)
+		})
 		adminRouter.Use(middleware.AuthMiddleware(1))
 		{
 			// 获取管理员个人信息
@@ -83,6 +100,13 @@ func InitRouter() *gin.Engine {
 			adminRouter.PUT("/videos", adminController.UpdateVideo)
 			// 视频删除
 			adminRouter.DELETE("/videos", adminController.DeleteVideo)
+			// 管理员密码修改
+			adminRouter.PUT("/password", userController.UpdatePassword)
+
+			// 获取实时数据
+			adminRouter.GET("/real_time_data", adminController.GetRealTimeData)
+			// 获取历史数据
+			adminRouter.GET("/historical_data", adminController.GetHistoricalData)
 		}
 	}
 
@@ -92,9 +116,13 @@ func InitRouter() *gin.Engine {
 		// 用户注册
 		userRouter.POST("", userController.CreateUser)
 		// 用户登录
-		userRouter.POST("/token", userController.Login)
+		userRouter.POST("/token", func(c *gin.Context) {
+			userController.Login(c, 0)
+		})
 		// 利用刷新令牌获取访问令牌
-		userRouter.POST("/access_token", userController.AccessToken)
+		userRouter.POST("/access_token", func(c *gin.Context) {
+			userController.AccessToken(c, 0)
+		})
 
 		userRouter.Use(middleware.AuthMiddleware(0))
 		{
@@ -120,6 +148,7 @@ func InitRouter() *gin.Engine {
 			userRouter.DELETE("/collections", userController.DeleteCollection)
 		}
 	}
+
 	// 视频路由组
 	videoRouter := r.Group("/videos")
 	{
@@ -130,12 +159,12 @@ func InitRouter() *gin.Engine {
 
 		videoRouter.Use(middleware.AuthMiddleware(0))
 		{
+			// 更新视频状态
+			videoRouter.PUT("", videoController.UpdateVideoStatus)
 			// 视频点赞
 			videoRouter.POST("/likes", videoController.LikeVideo)
 			// 视频取消点赞
 			videoRouter.DELETE("/likes", videoController.UnlikeVideo)
-			// 更新视频状态
-			videoRouter.PUT("", videoController.UpdateVideoStatus)
 			// 新增视频评论
 			videoRouter.POST("/comments", videoController.AddComment)
 			// 删除评论
@@ -151,6 +180,7 @@ func InitRouter() *gin.Engine {
 		}
 	}
 
+	// API 路由组
 	apiRouter := r.Group("/api")
 	{
 		// 发送邮箱验证码

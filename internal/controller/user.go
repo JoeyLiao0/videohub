@@ -12,6 +12,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// UserController 用户控制器
 type UserController struct {
 	userAvatarService     *service.UserAvatar     // 用户头像服务
 	userListService       *service.UserList       // 用户列表服务
@@ -20,7 +21,7 @@ type UserController struct {
 	userCollectionService *service.UserCollection // 添加用户收藏服务
 }
 
-// 修改 NewUserController:
+// NewUserController 创建一个新的 UserController 实例
 func NewUserController(uas *service.UserAvatar, uls *service.UserList, us *service.User,
 	uvs *service.UserVideo, ucs *service.UserCollection) *UserController {
 	return &(UserController{
@@ -32,6 +33,7 @@ func NewUserController(uas *service.UserAvatar, uls *service.UserList, us *servi
 	})
 }
 
+// GetUserID 从上下文中获取用户 ID
 func GetUserID(c *gin.Context) (uint, error) {
 	idValue, exists := c.Get("id")
 	if !exists {
@@ -41,33 +43,35 @@ func GetUserID(c *gin.Context) (uint, error) {
 	return id, nil
 }
 
-// Login 用户登录处理函数，返回范文令牌和刷新令牌给前端
-func (uc *UserController) Login(c *gin.Context) {
+// Login 用户登录处理函数, 返回范文令牌和刷新令牌给前端
+func (uc *UserController) Login(c *gin.Context, role int8) {
 	var request user.LoginRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
 		logrus.Debug(err.Error())
 		c.JSON(http.StatusOK, utils.Error(http.StatusBadRequest, "请求无效"))
 		return
 	}
-	response := uc.userService.Login(&request)
+
+	response := uc.userService.Login(&request, role)
 	c.JSON(http.StatusOK, response)
 }
 
 // AccessToken 获取访问令牌处理函数，返回访问令牌给前端
-func (uc *UserController) AccessToken(c *gin.Context) {
+func (uc *UserController) AccessToken(c *gin.Context, role int8) {
 	var request user.AccessTokenRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
 		logrus.Debug(err.Error())
 		c.JSON(http.StatusOK, utils.Error(http.StatusBadRequest, "请求无效"))
 		return
 	}
-	response := uc.userService.AccessToken(&request)
+
+	response := uc.userService.AccessToken(&request, role)
 	c.JSON(http.StatusOK, response)
 }
 
 // GetUserInfo 获取某个用户信息 (根据用户的 access_token 拿到 id)
 func (uc *UserController) GetUser(c *gin.Context) {
-	id, err := GetUserID(c) // 从上下文中获取用户 ID
+	id, err := GetUserID(c)
 	if err != nil {
 		logrus.Debug(err.Error())
 		c.JSON(http.StatusOK, utils.Error(http.StatusUnauthorized, "未授权"))
@@ -99,7 +103,7 @@ func (uc *UserController) CreateUser(c *gin.Context) {
 
 // UpdateUser 根据用户 ID 更新用户信息
 func (uc *UserController) UpdateUser(c *gin.Context) {
-	id, err := GetUserID(c) // 从上下文中获取用户 ID
+	id, err := GetUserID(c)
 	if err != nil {
 		logrus.Debug(err.Error())
 		c.JSON(http.StatusOK, utils.Error(http.StatusUnauthorized, "未授权"))
@@ -133,7 +137,7 @@ func (uc *UserController) UpdateUser(c *gin.Context) {
 
 // DeleteUser 软删除（注销） status 设置为 2
 func (uc *UserController) DeleteUser(c *gin.Context) {
-	id, err := GetUserID(c) // 从上下文中获取用户 ID
+	id, err := GetUserID(c)
 	if err != nil {
 		logrus.Debug(err.Error())
 		c.JSON(http.StatusOK, utils.Error(http.StatusUnauthorized, "未授权"))
@@ -146,7 +150,7 @@ func (uc *UserController) DeleteUser(c *gin.Context) {
 
 // UploadAvatar 上传用户头像（携带头像数据）
 func (uc *UserController) UploadAvatar(c *gin.Context) {
-	id, err := GetUserID(c) // 从上下文中获取用户 ID
+	id, err := GetUserID(c)
 	if err != nil {
 		logrus.Debug(err.Error())
 		c.JSON(http.StatusOK, utils.Error(http.StatusUnauthorized, "未授权"))
@@ -166,7 +170,7 @@ func (uc *UserController) UploadAvatar(c *gin.Context) {
 
 // UpdatePassword 修改用户密码
 func (uc *UserController) UpdatePassword(c *gin.Context) {
-	id, err := GetUserID(c) // 从上下文中获取用户 ID
+	id, err := GetUserID(c)
 	if err != nil {
 		logrus.Debug(err.Error())
 		c.JSON(http.StatusOK, utils.Error(http.StatusUnauthorized, "未授权"))
@@ -190,8 +194,7 @@ func (uc *UserController) UpdatePassword(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-// SendEmailVerification 发送验证码到邮箱
-// 采用 gomail + SMTP 发送邮件 (163 邮箱)
+// SendEmailVerification 发送验证码到邮箱, 采用 gomail + SMTP 发送邮件 (163 邮箱)
 func (uc *UserController) SendEmailVerification(c *gin.Context) {
 	var request user.SendEmailVerificationRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
@@ -212,19 +215,20 @@ func (uc *UserController) SendEmailVerification(c *gin.Context) {
 
 // GetVideos 获取用户上传的视频列表
 func (uc *UserController) GetVideos(c *gin.Context) {
-	id, err := GetUserID(c) // 从上下文中获取用户 ID
+	id, err := GetUserID(c)
 	if err != nil {
 		logrus.Debug(err.Error())
 		c.JSON(http.StatusOK, utils.Error(http.StatusUnauthorized, "未授权"))
 		return
 	}
+
 	response := uc.userVideoService.GetUserVideos(id)
 	c.JSON(http.StatusOK, response)
 }
 
 // DeleteVideo 删除用户上传的视频
 func (uc *UserController) DeleteVideo(c *gin.Context) {
-	id, err := GetUserID(c) // 从上下文中获取用户 ID
+	id, err := GetUserID(c)
 	if err != nil {
 		logrus.Debug(err.Error())
 		c.JSON(http.StatusOK, utils.Error(http.StatusUnauthorized, "未授权"))
@@ -236,25 +240,27 @@ func (uc *UserController) DeleteVideo(c *gin.Context) {
 		c.JSON(http.StatusOK, utils.Error(http.StatusBadRequest, "请求无效"))
 		return
 	}
+
 	response := uc.userVideoService.DeleteUserVideo(id, &request)
 	c.JSON(http.StatusOK, response)
 }
 
 // GetCollections 获取用户收藏的视频列表
 func (uc *UserController) GetCollections(c *gin.Context) {
-	id, err := GetUserID(c) // 从上下文中获取用户 ID
+	id, err := GetUserID(c)
 	if err != nil {
 		logrus.Debug(err.Error())
 		c.JSON(http.StatusOK, utils.Error(http.StatusUnauthorized, "未授权"))
 		return
 	}
+
 	response := uc.userCollectionService.GetUserCollections(id)
 	c.JSON(http.StatusOK, response)
 }
 
 // AddCollection 更新用户收藏的视频
 func (uc *UserController) AddCollection(c *gin.Context) {
-	id, err := GetUserID(c) // 从上下文中获取用户 ID
+	id, err := GetUserID(c)
 	if err != nil {
 		logrus.Debug(err.Error())
 		c.JSON(http.StatusOK, utils.Error(http.StatusUnauthorized, "未授权"))
@@ -266,24 +272,26 @@ func (uc *UserController) AddCollection(c *gin.Context) {
 		c.JSON(http.StatusOK, utils.Error(http.StatusBadRequest, "请求无效"))
 		return
 	}
+
 	response := uc.userCollectionService.AddUserCollection(id, &request)
 	c.JSON(http.StatusOK, response)
 }
 
 // DeleteCollection 删除用户收藏的视频
 func (uc *UserController) DeleteCollection(c *gin.Context) {
-	id, err := GetUserID(c) // 从上下文中获取用户 ID
+	id, err := GetUserID(c)
 	if err != nil {
 		logrus.Debug(err.Error())
 		c.JSON(http.StatusOK, utils.Error(http.StatusUnauthorized, "未授权"))
 		return
 	}
 	var request user.DeleteCollectionsRequest
-	if err := c.ShouldBindJSON(&request); err != nil {
+	if err := c.ShouldBind(&request); err != nil {
 		logrus.Debug(err.Error())
 		c.JSON(http.StatusOK, utils.Error(http.StatusBadRequest, "请求无效"))
 		return
 	}
+
 	response := uc.userCollectionService.DeleteUserCollection(id, &request)
 	c.JSON(http.StatusOK, response)
 }

@@ -7,8 +7,10 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// AppConfig 全局配置变量
 var AppConfig *Config
 
+// Config 配置结构体
 type Config struct {
 	Run     runConfig     `yaml:"run"`
 	Storage storageConfig `yaml:"storage"`
@@ -22,6 +24,7 @@ type Config struct {
 	Video   videoConfig   `yaml:"video"`
 }
 
+// 服务器运行配置
 type runConfig struct {
 	Name  string `yaml:"name"`
 	Host  string `yaml:"host"`
@@ -29,6 +32,7 @@ type runConfig struct {
 	Debug bool   `yaml:"debug"`
 }
 
+// 存储配置
 type storageConfig struct {
 	Base        string `yaml:"base"`
 	VideosData  string `yaml:"videos_data"`
@@ -37,6 +41,7 @@ type storageConfig struct {
 	Images      string `yaml:"images"`
 }
 
+// 静态资源配置
 type staticConfig struct {
 	Base   string `yaml:"base"`
 	Video  string `yaml:"video"`
@@ -44,6 +49,7 @@ type staticConfig struct {
 	Avatar string `yaml:"avatar"`
 }
 
+// MySQL配置
 type mysqlConfig struct {
 	Host     string `yaml:"host"`
 	Port     string `yaml:"port"`
@@ -52,6 +58,7 @@ type mysqlConfig struct {
 	Name     string `yaml:"name"`
 }
 
+// Redis配置
 type redisConfig struct {
 	Host     string `yaml:"host"`
 	Port     string `yaml:"port"`
@@ -59,6 +66,7 @@ type redisConfig struct {
 	DB       int    `yaml:"db"`
 }
 
+// JWT配置
 type jwtConfig struct {
 	AccessTokenSecret  string `yaml:"access_token_secret"`
 	AccessTokenExpire  uint   `yaml:"access_token_expire"`
@@ -66,6 +74,7 @@ type jwtConfig struct {
 	RefreshTokenExpire uint   `yaml:"refresh_token_expire"`
 }
 
+// CORS配置
 type corsConfig struct {
 	AllowOrigins     []string `yaml:"allow_origins"`
 	AllowMethods     []string `yaml:"allow_methods"`
@@ -75,6 +84,7 @@ type corsConfig struct {
 	MaxAge           uint     `yaml:"max_age"`
 }
 
+// 邮件配置
 type emailConfig struct {
 	Username   string `yaml:"username"`
 	Password   string `yaml:"password"`
@@ -83,6 +93,7 @@ type emailConfig struct {
 	Expiration int    `yaml:"expiration"`
 }
 
+// 日志配置
 type logConfig struct {
 	Path       string `yaml:"path"`
 	MaxSize    int    `yaml:"max_size"`
@@ -91,12 +102,14 @@ type logConfig struct {
 	Compress   bool   `yaml:"compress"`
 }
 
+// 视频相关配置
 type videoConfig struct {
 	DefaultStatus int `yaml:"default_status"`
 	DefaultPage   int `yaml:"default_page"`
 	DefaultLimit  int `yaml:"default_limit"`
 }
 
+// InitConfig 初始化配置
 func InitConfig() {
 	dataBytes, err := os.ReadFile("config/config.yaml")
 	if err != nil {

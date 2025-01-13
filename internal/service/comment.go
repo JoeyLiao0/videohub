@@ -16,30 +16,31 @@ type Comment struct {
 	videoRepo   *repository.Video
 }
 
+// NewComment 创建评论服务
 func NewComment(cr *repository.Comment, vr *repository.Video) *Comment {
 	return &Comment{commentRepo: cr, videoRepo: vr}
 }
 
-// GetComments获取视频的所有评论
+// GetComments 获取视频的所有评论
 func (cs *Comment) GetComments(request *video.GetCommentsRequest) *utils.Response {
 	vid := request.VideoID
 	uid := request.UserID
-	// uid 为 0 的时候点赞全部为 false
-
-	// comments中先放入父评论为-1的评论，每个评论的reply数组先为空
+  
+	// comments中先放入父评论为-1的评论，每个评论的 reply 数组先为空
 	comments, err := cs.commentRepo.GetCommentsByVideo(vid, uid)
 	if err != nil {
 		return utils.Error(http.StatusInternalServerError, "获取评论失败")
 	}
-	// 填充每个评论的reply数组
 	comments, err = cs.commentRepo.FillPerCommentsReply(comments, uid)
 	if err != nil {
 		return utils.Error(http.StatusInternalServerError, "获取子评论失败")
 	}
+
+	logrus.Debug("GetComments successfully")
 	return utils.Ok(http.StatusOK, &video.GetCommentsResponse{CommentsOutside: comments})
 }
 
-// CreateComment创建评论
+// CreateComment 创建评论
 func (cs *Comment) CreateComment(request *video.AddCommentRequest) *utils.Response {
 	comment := &model.Comment{
 		UserID:         request.UserID,
@@ -53,12 +54,13 @@ func (cs *Comment) CreateComment(request *video.AddCommentRequest) *utils.Respon
 		return utils.Error(http.StatusInternalServerError, "服务器内部错误")
 	}
 
+	logrus.Debug("CreateComment successfully")
 	return utils.Success(http.StatusOK)
 }
 
-// DeleteComment删除评论
+// DeleteComment 删除评论
 func (cs *Comment) DeleteComment(id uint, request *video.DeleteCommentRequest) *utils.Response {
-	// up 和 评论发布者可以删除该评论
+	// 仅 up 和评论发布者可以删除该评论
 	var result struct {
 		UserID uint
 	}
@@ -84,5 +86,6 @@ func (cs *Comment) DeleteComment(id uint, request *video.DeleteCommentRequest) *
 		return utils.Error(http.StatusInternalServerError, "服务器内部错误")
 	}
 
+	logrus.Debug("DeleteComment successfully")
 	return utils.Success(http.StatusOK)
 }

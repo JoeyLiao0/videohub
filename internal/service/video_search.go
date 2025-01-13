@@ -1,58 +1,71 @@
 package service
 
 import (
+	"math"
 	"net/http"
-	"videohub/global"
 	"videohub/internal/repository"
 	"videohub/internal/utils"
+	"videohub/internal/utils/admin"
 	"videohub/internal/utils/video"
 
-	"github.com/redis/go-redis/v9"
 	"github.com/sirupsen/logrus"
 )
 
 // VideoService 提供视频业务逻辑
 type VideoSearch struct {
-	videoRepo *repository.Video
-	likeRepo  *repository.Like
+	videoRepo      *repository.Video
+	likeRepo       *repository.Like
+	collectionRepo *repository.Collection
 }
 
-// VideoService 实例
-func NewVideoSearch(vr *repository.Video, lr *repository.Like) *VideoSearch {
-	return &VideoSearch{videoRepo: vr, likeRepo: lr}
+// NewVideoSearch 实例化视频搜索服务
+func NewVideoSearch(vr *repository.Video, lr *repository.Like, cr *repository.Collection) *VideoSearch {
+	return &VideoSearch{videoRepo: vr, likeRepo: lr, collectionRepo: cr}
 }
 
 // 获取视频列表
 func (vs *VideoSearch) GetVideos(request *video.GetVideosRequest) *utils.Response {
-	var response video.GetVideosResponse
-	fields := []string{"upload_id", "created_at", "title", "description", "cover_path", "video_path", "video_status", "likes", "favorites", "comments"}
-	for i, field := range fields {
-		fields[i] = "videos." + field
+	// 计算总记录数
+	total, err := vs.videoRepo.Count(*request.Status, request.Like)
+	if err != nil {
+		logrus.Error(err.Error())
+		return utils.Error(http.StatusInternalServerError, "服务器内部错误")
 	}
-	fields = append(fields, "users.username as uploader_name")
-	if err := vs.videoRepo.FindVideos(request.Like, *request.Status, request.Page, request.Limit, fields, &response.Videos); err != nil {
+	totalPages := int(math.Ceil(float64(total) / float64(request.Limit)))
+
+	videos, err := vs.videoRepo.GetVideos(request.Like, *request.Status, request.Page, request.Limit)
+	if err != nil {
 		logrus.Error(err.Error())
 		return utils.Error(http.StatusInternalServerError, "服务器内部错误")
 	}
 
-	for i := range response.Videos {
-		views, err := global.Rdb.Get(global.Ctx, "video:"+response.Videos[i].UploadID+":views").Int()
-		if err == redis.Nil {
-			logrus.Debug("redis: nil")
-			views = 0
-		} else if err != nil {
-			logrus.Debug(err.Error())
-			return utils.Error(http.StatusInternalServerError, "服务器内部错误")
+	// 检查是否点赞、收藏
+	for i := range videos {
+		if request.UserID != 0 {
+			isLiked, err := vs.likeRepo.CheckVideoLike(request.UserID, videos[i].UploadID)
+			if err != nil {
+				logrus.Error(err.Error())
+				return utils.Error(http.StatusInternalServerError, "服务器内部错误")
+			}
+			videos[i].IsLiked = isLiked
+			isCollected, err := vs.collectionRepo.CheckVideoCollect(request.UserID, videos[i].UploadID)
+			if err != nil {
+				logrus.Error(err.Error())
+				return utils.Error(http.StatusInternalServerError, "服务器内部错误")
+			}
+			videos[i].IsCollected = isCollected
 		}
-		response.Videos[i].Views = views
-		// 查询用户是否点赞
-		isLiked, err := vs.likeRepo.CheckVideoLike(request.UserID, response.Videos[i].UploadID)
-		if err != nil {
-			logrus.Debug(err.Error())
-			return utils.Error(http.StatusInternalServerError, "服务器内部错误")
-		}
-		response.Videos[i].IsLiked = isLiked
 	}
 
+	response := admin.VideoInfo{
+		Videos: videos,
+		Pages: admin.PageInfo{
+			Page:       request.Page,
+			Limit:      request.Limit,
+			TotalPages: totalPages,
+		},
+	}
+
+	logrus.Debug("Get videos successfully")
 	return utils.Ok(http.StatusOK, &response)
 }

@@ -10,25 +10,27 @@ import (
 	"videohub/internal/model"
 	"videohub/internal/repository"
 	"videohub/internal/utils"
+	"videohub/internal/utils/admin"
 	"videohub/internal/utils/user"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/sirupsen/logrus"
 )
 
+// User 用户服务层操作对象
 type User struct {
-	//用户服务，用到user表、collection表、video表操作
 	userRepo       *repository.User
 	collectionRepo *repository.Collection
 	videoRepo      *repository.Video
 }
 
-// 工厂函数，返回单例的服务层操作对象
+// NewUser 创建一个新的 User 实例
 func NewUser(ur *repository.User, cr *repository.Collection, vr *repository.Video) *User {
 	return &(User{userRepo: ur, collectionRepo: cr, videoRepo: vr})
 }
 
-func (us *User) Login(request *user.LoginRequest) *utils.Response {
+// Login 用户登录
+func (us *User) Login(request *user.LoginRequest, role int8) *utils.Response {
 	var result model.User
 	if err := us.userRepo.Search(map[string]interface{}{"email": request.Email}, 1, &result); err != nil {
 		logrus.Debug(err.Error())
@@ -45,6 +47,11 @@ func (us *User) Login(request *user.LoginRequest) *utils.Response {
 		return utils.Error(http.StatusUnauthorized, "用户已注销")
 	}
 
+	if result.Role != role {
+		logrus.Debug("role error")
+		return utils.Error(http.StatusBadRequest, "权限错误")
+	}
+
 	accessToken, err := utils.GenerateJWT(utils.Payload{ID: result.ID, Role: result.Role}, config.AppConfig.JWT.AccessTokenSecret, config.AppConfig.JWT.AccessTokenExpire)
 	if err != nil {
 		logrus.Error(err.Error())
@@ -57,6 +64,12 @@ func (us *User) Login(request *user.LoginRequest) *utils.Response {
 		return utils.Error(http.StatusInternalServerError, "服务器内部错误")
 	}
 
+	if result.Role == 0 {
+		key := fmt.Sprintf("user:%d:is_online", result.ID)
+		global.Rdb.Set(global.Ctx, key, 1, 1*time.Minute)
+		global.Rdb.SAdd(global.Ctx, "login_users", result.ID)
+	}
+
 	logrus.Debug("Login successfully")
 	return utils.Ok(http.StatusOK, user.LoginResponse{
 		AccessToken:  accessToken,
@@ -64,7 +77,8 @@ func (us *User) Login(request *user.LoginRequest) *utils.Response {
 	})
 }
 
-func (us *User) AccessToken(request *user.AccessTokenRequest) *utils.Response {
+// AccessToken 用刷新令牌获取新的访问令牌
+func (us *User) AccessToken(request *user.AccessTokenRequest, role int8) *utils.Response {
 	payload, err := utils.ParseJWT(request.RefreshToken, config.AppConfig.JWT.RefreshTokenSecret)
 	if err != nil {
 		if errors.Is(err, jwt.ErrTokenExpired) {
@@ -74,6 +88,10 @@ func (us *User) AccessToken(request *user.AccessTokenRequest) *utils.Response {
 			logrus.Error(err.Error())
 			return utils.Error(http.StatusInternalServerError, "服务器内部错误")
 		}
+	}
+	if payload.Role != role {
+		logrus.Debug("role error")
+		return utils.Error(http.StatusBadRequest, "权限错误")
 	}
 
 	if count, err := us.userRepo.Count(map[string]interface{}{"id": payload.ID}); err != nil || count == 0 {
@@ -130,7 +148,7 @@ func (us *User) CreateUser(request *user.CreateUserRequest) *utils.Response {
 	newUser.Salt = utils.GenerateSalt(16)
 	newUser.Password = utils.HashPassword(request.Password, newUser.Salt)
 	newUser.Email = request.Email
-	newUser.Avatar = fmt.Sprintf("%s/%s/%s", config.AppConfig.Static.Base, config.AppConfig.Static.Avatar, "tourist.jpeg")
+	newUser.Avatar = fmt.Sprintf("%s%s%s", config.AppConfig.Static.Base, config.AppConfig.Static.Avatar, "/tourist.png")
 
 	if err := us.userRepo.Create(&newUser); err != nil {
 		logrus.Error(err.Error())
@@ -166,7 +184,6 @@ func (us *User) UpdateUser(id uint, fileds interface{}, request *user.UpdateUser
 			return utils.Error(http.StatusBadRequest, "用户名已被注册")
 		}
 	}
-
 	if err := us.userRepo.Update(map[string]interface{}{"id": id}, fileds, request); err != nil {
 		logrus.Error(err.Error())
 		return utils.Error(http.StatusInternalServerError, "服务器内部错误")
@@ -226,6 +243,7 @@ func (us *User) UpdateUserPassword(id uint, request *user.UpdatePasswordRequest)
 	return utils.Success(http.StatusOK)
 }
 
+// SendEmailVerification 发送邮箱验证码
 func (us *User) SendEmailVerification(request *user.SendEmailVerificationRequest) *utils.Response {
 	code := utils.GenerateCode(6)
 	global.Rdb.Set(global.Ctx, request.Email, code, time.Minute*time.Duration(config.AppConfig.Email.Expiration))
@@ -235,6 +253,48 @@ func (us *User) SendEmailVerification(request *user.SendEmailVerificationRequest
 	}
 
 	logrus.Debug("Email verification sent successfully")
-	// return utils.Success(http.StatusOK)
-	return utils.Ok(http.StatusOK, map[string]string{"code": code})
+	return utils.Success(http.StatusOK)
+}
+
+// CreateUserByAdmin 管理员创建新用户
+func (us *User) CreateUserByAdmin(request *admin.CreateUserRequest) *utils.Response {
+	if count, err := us.userRepo.Count(map[string]interface{}{"username": request.Username}); err != nil || count != 0 {
+		logrus.Debug("username exists")
+		return utils.Error(http.StatusBadRequest, "用户名已被注册")
+	}
+
+	if count, err := us.userRepo.Count(map[string]interface{}{"email": request.Email}); err != nil || count != 0 {
+		logrus.Debug("email exists")
+		return utils.Error(http.StatusBadRequest, "邮箱已被注册")
+	}
+
+	var newUser model.User
+	newUser.Username = request.Username
+	newUser.Salt = utils.GenerateSalt(16)
+	newUser.Password = utils.HashPassword(request.Password, newUser.Salt)
+	newUser.Email = request.Email
+	if request.Avatar == "" {
+		newUser.Avatar = fmt.Sprintf("%s%s%s", config.AppConfig.Static.Base, config.AppConfig.Static.Avatar, "/tourist.jpeg")
+	} else {
+		newUser.Avatar = request.Avatar
+	}
+
+	if err := us.userRepo.Create(&newUser); err != nil {
+		logrus.Error(err.Error())
+		return utils.Error(http.StatusInternalServerError, "服务器内部错误")
+	}
+
+	logrus.Debugf("User %s created successfully", newUser.Username)
+	return utils.Success(http.StatusOK)
+}
+
+// UpdateUserByAdmin 管理员更新用户信息
+func (us *User) UpdateUserByAdmin(request *admin.UpdateUserRequest) *utils.Response {
+	if err := us.userRepo.Update(map[string]interface{}{"id": request.ID}, []string{"status"}, map[string]interface{}{"status": request.Status}); err != nil {
+		logrus.Error(err.Error())
+		return utils.Error(http.StatusInternalServerError, "服务器内部错误")
+	}
+
+	logrus.Debug("User updated successfully")
+	return utils.Success(http.StatusOK)
 }

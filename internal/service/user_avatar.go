@@ -12,12 +12,12 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// UserAvatar 用户头像服务层操作对象
 type UserAvatar struct {
-	//头像服务，只用到user表操作，所以只用注入user_repostiory
 	userRepo *repository.User
 }
 
-// 工厂函数，返回单例的服务层操作对象
+// NewUserAvatar 实例化用户头像服务层操作对象
 func NewUserAvatar(ur *repository.User) *UserAvatar {
 	return &(UserAvatar{userRepo: ur})
 }
@@ -27,6 +27,22 @@ func (uas *UserAvatar) UploadUserAvatar(id uint, request *user.UploadAvatarReque
 	if err := utils.CheckFile(request.Avatar, []string{".png", ".jpg", ".jpeg"}, 8<<20); err != nil {
 		logrus.Debug(err.Error())
 		return utils.Error(http.StatusBadRequest, "文件格式错误或文件过大")
+	}
+
+	var result struct {
+		Avatar string
+	}
+
+	if err := uas.userRepo.Search(map[string]interface{}{"id": id}, 1, &result); err != nil {
+		logrus.Error(err.Error())
+		return utils.Error(http.StatusInternalServerError, "服务器内部错误")
+	}
+
+	if filepath.Base(result.Avatar) != "tourist.png" {
+		if err := utils.RemoveFile(filepath.Join(config.AppConfig.Storage.Images, filepath.Base(result.Avatar))); err != nil {
+			logrus.Error(err.Error())
+			return utils.Error(http.StatusInternalServerError, "服务器内部错误")
+		}
 	}
 
 	fileExt := filepath.Ext(request.Avatar.Filename)

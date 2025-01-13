@@ -13,38 +13,47 @@ import (
 	"mime/multipart"
 	"os"
 	"path/filepath"
+	"sort"
+	"strconv"
 	"text/template"
 	"time"
 	"videohub/config"
 	"videohub/global"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/sirupsen/logrus"
 	"gopkg.in/gomail.v2"
 )
 
+// Response 响应结构体
 type Response struct {
 	StatusCode int         `json:"code"`
 	ErrorMsg   string      `json:"error,omitempty"`
 	Data       interface{} `json:"data,omitempty"`
 }
 
+// Success 返回成功响应, 不带数据
 func Success(statusCode int) *Response {
 	return &Response{StatusCode: statusCode}
 }
 
+// Ok 返回成功响应, 带数据
 func Ok(statusCode int, data interface{}) *Response {
 	return &Response{StatusCode: statusCode, Data: data}
 }
 
+// Error 返回错误响应
 func Error(statusCode int, errorMsg string) *Response {
 	return &Response{StatusCode: statusCode, ErrorMsg: errorMsg}
 }
 
+// Payload JWT载荷
 type Payload struct {
 	ID   uint `json:"id"`
 	Role int8 `json:"role"`
 }
 
+// MyCustomClaims 自定义声明
 type MyCustomClaims struct {
 	Payload   Payload
 	IssuedAt  int64 `json:"iat"`
@@ -52,6 +61,7 @@ type MyCustomClaims struct {
 	jwt.RegisteredClaims
 }
 
+// GenerateJWT 生成JWT
 func GenerateJWT(pyaload Payload, key string, duration uint) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, MyCustomClaims{
 		Payload:   pyaload,
@@ -62,6 +72,7 @@ func GenerateJWT(pyaload Payload, key string, duration uint) (string, error) {
 	return "Bearer " + ss, err
 }
 
+// ParseJWT 解析JWT
 func ParseJWT(tokenString string, key string) (Payload, error) {
 	if len(tokenString) > 7 && tokenString[:7] == "Bearer " {
 		tokenString = tokenString[7:]
@@ -83,9 +94,8 @@ func ParseJWT(tokenString string, key string) (Payload, error) {
 	}
 }
 
+// GenerateCode 生成随机验证码
 func GenerateCode(length int) string {
-	// randSource := mrand.New(mrand.NewSource(time.Now().UnixNano()))
-	// code := fmt.Sprintf("%06d", randSource.Intn(1000000))
 	const digits = "0123456789"
 	code := make([]byte, length)
 	for i := range code {
@@ -99,6 +109,7 @@ func GenerateCode(length int) string {
 	return string(code)
 }
 
+// LoadAndFillTemplate 加载并填充 email 模板
 func LoadAndFillTemplate(filePath string, data interface{}) (string, error) {
 	templateFile, err := os.ReadFile(filePath)
 	if err != nil {
@@ -124,19 +135,6 @@ func SendEmailVerification(to string, code string) error {
 	password := config.AppConfig.Email.Password
 	host := config.AppConfig.Email.Host
 	port := config.AppConfig.Email.Port
-	// addr := fmt.Sprintf("%s:%d", host, port)
-	// e := email.NewEmail()
-	// e.From = fmt.Sprintf("VideoHub <%s>", username)
-	// e.To = []string{to}
-	// e.Subject = "Verification Code"
-	// e.HTML = []byte(`
-	// 	<h1>Verification Code</h1>
-	// 	<p>Your verification code is: <strong>` + code + `</strong></p>`)
-	// if err := e.Send(addr, smtp.PlainAuth("", username, password, host)); err != nil {
-	// 	log.Println(err.Error()) // EOF
-	// 	return err
-	// }
-	// return nil
 	m := gomail.NewMessage()
 	m.SetHeader("From", fmt.Sprintf("VideoHub <%s>", username))
 	m.SetHeader("To", to)
@@ -157,6 +155,7 @@ func SendEmailVerification(to string, code string) error {
 	return nil
 }
 
+// VerifyEmailCode 验证邮箱验证码
 func VerifyEmailCode(email string, code string) error {
 	c, err := global.Rdb.Get(global.Ctx, email).Result()
 	if err != nil {
@@ -186,6 +185,7 @@ func HashPassword(password string, salt string) string {
 	return hex.EncodeToString(hash[:])
 }
 
+// CheckFile 检查文件类型和大小
 func CheckFile(file *multipart.FileHeader, types []string, maxSize int64) error {
 	if file.Size > maxSize {
 		return errors.New("file size exceeds the limit")
@@ -201,6 +201,7 @@ func CheckFile(file *multipart.FileHeader, types []string, maxSize int64) error 
 	return errors.New("file type is not supported")
 }
 
+// SaveFile 保存文件
 func SaveFile(file *multipart.FileHeader, dst string) error {
 	src, err := file.Open()
 	if err != nil {
@@ -258,16 +259,25 @@ func RemoveDir(dirPath string) error {
 	if _, err := os.Stat(dirPath); os.IsNotExist(err) {
 		return err
 	}
-
 	// 删除目录下的所有文件和子目录
-	err := os.RemoveAll(dirPath)
-	if err != nil {
+	if err := os.RemoveAll(dirPath); err != nil {
 		return err
 	}
 	return nil
 }
 
-// CalculateFileHash
+// RemoveFile 删除指定文件
+func RemoveFile(filePath string) error {
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		return err
+	}
+	if err := os.Remove(filePath); err != nil {
+		return err
+	}
+	return nil
+}
+
+// CalculateFileHash 计算文件哈希值
 func CalculateFileHash(input interface{}) (string, error) {
 	hasher := sha256.New()
 
@@ -287,6 +297,7 @@ func CalculateFileHash(input interface{}) (string, error) {
 	case []string:
 		// 处理 []string 类型
 		for _, filePath := range v {
+			logrus.Debug(filePath)
 			file, err := os.Open(filePath)
 			if err != nil {
 				return "", err
@@ -309,7 +320,7 @@ func CalculateFileHash(input interface{}) (string, error) {
 }
 
 // ListFilesSortedByName 列出指定目录下按名称排序的文件名
-func ListFilesSortedByName(dirPath string, count int) ([]string, error) {
+func ListFilesSortedByName(dirPath string, count int, prefix string) ([]string, error) {
 	files, err := os.ReadDir(dirPath)
 	if err != nil {
 		return nil, err
@@ -318,18 +329,29 @@ func ListFilesSortedByName(dirPath string, count int) ([]string, error) {
 	var fileNames []string
 	for _, file := range files {
 		if !file.IsDir() {
-			fileNames = append(fileNames, filepath.Join(dirPath, file.Name()))
+			fileNames = append(fileNames, file.Name())
 		}
 	}
+	logrus.Debug(fileNames)
+	sort.Slice(fileNames, func(i, j int) bool {
+		id1, _ := strconv.Atoi(filepath.Base(fileNames[i])[len(prefix)+1:])
+		id2, _ := strconv.Atoi(filepath.Base(fileNames[j])[len(prefix)+1:])
+		return id1 < id2
+	})
 
-	// 检查是否有缺失切片
+	for i, fileName := range fileNames {
+		fileNames[i] = filepath.Join(dirPath, fileName)
+	}
+
+	// 检查是否有缺失
 	if len(fileNames) < count {
-		return nil, errors.New("chunks are missing")
+		return nil, errors.New("files are missing")
 	}
 	return fileNames, nil
 }
 
-func GenerateUsername(n int) (string , error) {
+// GenerateUsername 生成随机用户名
+func GenerateUsername(n int) (string, error) {
 	letters := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 	result := make([]byte, n)
 	for i := range result {
@@ -342,6 +364,7 @@ func GenerateUsername(n int) (string , error) {
 	return string(result), nil
 }
 
+// GetURLPath 获取静态资源路径
 func GetURLPath(dir, path string) string {
-	return fmt.Sprintf("%s/static%s/%s", config.AppConfig.Storage.Base, dir, path)
+	return fmt.Sprintf("%s%s/%s", config.AppConfig.Static.Base, dir, path)
 }

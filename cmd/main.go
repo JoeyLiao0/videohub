@@ -8,14 +8,17 @@ import (
 	"time"
 	"videohub/config"
 	"videohub/global"
+	"videohub/internal/repository"
 	"videohub/internal/router"
 	"videohub/internal/utils"
 	"videohub/logger"
 
+	"github.com/robfig/cron/v3"
 	"github.com/sirupsen/logrus"
 )
 
 func main() {
+	// 初始化相关配置
 	global.Ctx = context.Background()
 	config.InitConfig()
 	logger.InitLogger(config.AppConfig.Run.Debug)
@@ -28,19 +31,23 @@ func main() {
 		Handler: r,
 	}
 
+	// 定时任务
+	c := cron.New(cron.WithSeconds())
+	c.AddFunc("0 0 0 * * *", func() { repository.WriteStats(global.DB) })
+	c.Start()
+
+	// 启动服务
 	go func() {
-		// 服务连接
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			logrus.Fatalf("listen: %s\n", err)
 		}
 	}()
 
-	// 等待中断信号以优雅地关闭服务器（设置 5 秒的超时时间）
+	// 优雅关闭服务
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt)
 	<-quit
 	logrus.Info("Shutdown Server ...")
-
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err := srv.Shutdown(ctx); err != nil {
