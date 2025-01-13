@@ -93,7 +93,17 @@ func (li *Like) RemoveCommentLikeRecord(userID uint, commentID uint) error {
 
 // DecrementCommentLikes 减少评论点赞数
 func (li *Like) DecrementCommentLikes(commentID uint) error {
-	return li.DB.Model(&model.Comment{}).
+	var likes int64
+	err := li.DB.Model(&model.Comment{}).
 		Where("id = ?", commentID).
-		Update("likes", gorm.Expr("likes - ?", 1)).Error
+		Pluck("likes", &likes).Error
+	if err != nil {
+		return err
+	}
+	if likes > 0 {
+		return li.DB.Model(&model.Comment{}).
+			Where("id = ?", commentID).
+			Update("likes", gorm.Expr("likes - ?", 1)).Error
+	}
+	return nil
 }

@@ -54,8 +54,6 @@ func InitRouter() *gin.Engine {
 	r := gin.New()
 	r.Use(gin.Recovery())
 	r.Use(gin.Logger())
-	// 为 multipart forms 设置较低的内存限制 (默认是 32 MiB)
-	// 例如: r.MaxMultipartMemory = 8 << 20  // 8 MiB
 
 	// 日志中间件
 	r.Use(middleware.LoggerMiddleware())

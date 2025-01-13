@@ -187,7 +187,6 @@ func (vc *VideoController) UnlikeComment(c *gin.Context) {
 	}
 	userID, _ := GetUserID(c)
 	request.UserID = userID
-	logrus.Debug(request)
 
 	response := vc.like.UnlikeComment(&request)
 	c.JSON(http.StatusOK, response)
